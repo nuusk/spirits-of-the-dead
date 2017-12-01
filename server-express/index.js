@@ -17,4 +17,8 @@ const io = socket(server);
 
 io.on('connection', (socket) => {
   console.log('Created socket connection with ' + socket.id + '.');
+
+  socket.on('testEventName', (data) => {
+    io.sockets.emit('testEventName', data);
+  });
 });
