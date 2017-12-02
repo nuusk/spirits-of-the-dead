@@ -1,5 +1,6 @@
 //make connection
-const serverAddr = 'http://localhost';
+//const serverAddr = 'http://localhost';
+const serverAddr = '192.168.1.6';
 const port = 1252;
 const socket = io.connect(serverAddr + ':' + port);
 
