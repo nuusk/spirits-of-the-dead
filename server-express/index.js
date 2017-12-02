@@ -1,7 +1,7 @@
 const express = require('express');
 const socket = require('socket.io');
 
-const PORT = 1252;
+const PORT = 1253;
 
 //app setup
 const app = express();
