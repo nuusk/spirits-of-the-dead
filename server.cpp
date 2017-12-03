@@ -90,7 +90,7 @@ void createSocket(int &sock)
 void setSocketOption(int sock)
 {
     const int one = 1;
-    int result = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+    int result = setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one));
     if (result == -1)
       error("setsockopt() error!");
 }
