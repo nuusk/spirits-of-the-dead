@@ -6,8 +6,9 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/epoll.h>
-#include <deque> 
+#include <deque>
 #include <cstring>
+#include <string>
 
 #define PORT 1252
 #define BUF_SIZE 65536
@@ -28,6 +29,7 @@ struct Client
     }
 };
 
+void error(string);
 void prepareSocket(int &sock, sockaddr_in &address);
 void createSocket(int &sock);
 void setSocketOption(int sock);
@@ -61,7 +63,7 @@ int main(int argc, char** argv)
 
     while (true)
         update(serverSocket, epollFd, event, clients);
-    
+
     close(serverSocket);
     close(epollFd);
 
@@ -82,21 +84,15 @@ void createSocket(int &sock)
 {
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock == -1)
-    {
-        perror("socket() error!");
-        exit(0);
-    }
+      error("socket() error!");
 }
 
 void setSocketOption(int sock)
 {
     const int one = 1;
     int result = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-	if (result == -1 ) 
-	{
-		perror("setsockopt() error!");
-        exit(0);
-    }
+    if (result == -1)
+      error("setsockopt() error!");
 }
 
 void setSocketAddress(sockaddr_in &address)
@@ -109,21 +105,15 @@ void setSocketAddress(sockaddr_in &address)
 void bindAddress(int sock, sockaddr_in &address)
 {
     int result = bind(sock, (sockaddr*)&address, sizeof(address));
-	if (result == -1)
-	{
-		perror("bind() error!");
-        exit(0);
-    } 
+  	if (result == -1)
+      error("bind() error!");
 }
 
 void startListening(int sock)
 {
 	int result = listen(sock, 1);
 	if (result == -1)
-	{
-		perror("listen() error!");
-        exit(0);
-	}
+    error("listen() error!");
 }
 
 void prepareEpoll(int sock, int &fd, epoll_event &event)
@@ -136,10 +126,7 @@ void createEpollFd(int &fd)
 {
     fd = epoll_create1(0);
     if (fd == -1)
-    {
-        perror("epoll_create() error!");
-        exit(0);
-    }
+      error("epoll_create() error!");
 }
 
 void addEpollEvent(int sock, int fd, epoll_event &event)
@@ -149,10 +136,7 @@ void addEpollEvent(int sock, int fd, epoll_event &event)
 
     int result = epoll_ctl(fd, EPOLL_CTL_ADD, sock, &event);
     if (result == -1)
-    {
-        perror("epoll_ctl() error!");
-        exit(0);
-    }
+      error("epoll_ctl() error!");
 }
 
 void update(int serverSocket, int epollFd, epoll_event &event, deque<Client> &clients)
@@ -165,16 +149,13 @@ void update(int serverSocket, int epollFd, epoll_event &event, deque<Client> &cl
     else
         manageClients(serverSocket, event, clients);
 
-}   
+}
 
 void epollWait(int fd, epoll_event &event)
 {
     int result = epoll_wait(fd, &event, 1, -1);
     if (result == -1)
-    {
-        perror("epoll_wait() error!");
-        exit(0);
-    }
+      error("epoll_wait() error!");
 }
 
 //póki co można się łączyć z tego samego IP kilka razy
@@ -185,7 +166,7 @@ void addNewClient(int serverSock, int epollFd, epoll_event &event, deque<Client>
     // {
     //     removeCheater(client);
     //     return;
-    // }    
+    // }
 
     addEpollEvent(client.fd, epollFd, event);
     clients.push_back(client);
@@ -214,13 +195,10 @@ Client acceptClient(int serverSock)
     int clientSocket;
     sockaddr_in clientInfo;
     socklen_t clientInfoSize = sizeof(clientInfo);
-    
+
     clientSocket = accept(serverSock, (sockaddr*)&clientInfo, &clientInfoSize);
     if (clientSocket == -1)
-    {
-        perror("accept() error!");
-        exit(0);
-    }
+      error("accept() error!");
 
     return Client(clientSocket, inet_ntoa(clientInfo.sin_addr), ntohs(clientInfo.sin_port));
 }
@@ -239,7 +217,7 @@ void manageClients(int serverSocket, epoll_event &event, deque<Client> &clients)
                 break;
             }
 
-            printf("I've got new message: %s", buf);            
+            printf("I've got new message: %s", buf);
         }
     }
 }
@@ -248,16 +226,21 @@ void removeClient(deque<Client>::iterator &client, deque<Client> &clients)
 {
     printf("Removing client: %s:%hu (fd: %d)\n", (*client).address, (*client).port, (*client).fd);
     close((*client).fd);
-    clients.erase(client);   
+    clients.erase(client);
 }
 
 bool readMessage(deque<Client>::iterator &client, char* buf)
 {
-    memset(buf, 0, BUF_SIZE);    
+    memset(buf, 0, BUF_SIZE);
 
     int msgSize = read((*client).fd, buf, BUF_SIZE);
     if (msgSize < 1)
         return false;
-    
+
     return true;
+}
+
+void error(string errorMessage) {
+  perror (errorMessage);
+  exit(0);
 }

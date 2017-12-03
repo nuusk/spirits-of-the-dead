@@ -1,6 +1,7 @@
 //make connection
 const serverAddr = 'http://localhost';
-const port = 1252;
+//const serverAddr = '192.168.8.107';
+const port = 1253;
 const socket = io.connect(serverAddr + ':' + port);
 
 const message = document.getElementById('message');
@@ -16,4 +17,16 @@ sendButton.addEventListener('click', () => {
 //listen for events
 socket.on('testEventName', (data) => {
   output.innerHTML += data.message + '</br>';
+});
+
+socket.on('connect', () => {
+  console.log('connected.');
+});
+
+socket.on('message', (data) => {
+  console.log('message sent.');
+});
+
+socket.on('disconnect', () => {
+  console.log('disconnected.');
 });
