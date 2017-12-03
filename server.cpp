@@ -10,6 +10,8 @@
 #include <cstring>
 #include <string>
 
+#include "sha1.h"
+
 #define PORT 1252
 #define BUF_SIZE 65536
 
@@ -84,15 +86,15 @@ void createSocket(int &sock)
 {
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock == -1)
-      error("socket() error!");
+        error("socket() error!");
 }
 
 void setSocketOption(int sock)
 {
     const int one = 1;
     int result = setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one));
-    if (result == -1)
-      error("setsockopt() error!");
+    if (result == -1)   
+        error("setsockopt() error!");
 }
 
 void setSocketAddress(sockaddr_in &address)
@@ -106,14 +108,14 @@ void bindAddress(int sock, sockaddr_in &address)
 {
     int result = bind(sock, (sockaddr*)&address, sizeof(address));
   	if (result == -1)
-      error("bind() error!");
+        error("bind() error!");
 }
 
 void startListening(int sock)
 {
 	int result = listen(sock, 1);
 	if (result == -1)
-    error("listen() error!");
+        error("listen() error!");
 }
 
 void prepareEpoll(int sock, int &fd, epoll_event &event)
@@ -126,7 +128,7 @@ void createEpollFd(int &fd)
 {
     fd = epoll_create1(0);
     if (fd == -1)
-      error("epoll_create() error!");
+        error("epoll_create() error!");
 }
 
 void addEpollEvent(int sock, int fd, epoll_event &event)
@@ -136,7 +138,7 @@ void addEpollEvent(int sock, int fd, epoll_event &event)
 
     int result = epoll_ctl(fd, EPOLL_CTL_ADD, sock, &event);
     if (result == -1)
-      error("epoll_ctl() error!");
+        error("epoll_ctl() error!");
 }
 
 void update(int serverSocket, int epollFd, epoll_event &event, deque<Client> &clients)
@@ -155,7 +157,7 @@ void epollWait(int fd, epoll_event &event)
 {
     int result = epoll_wait(fd, &event, 1, -1);
     if (result == -1)
-      error("epoll_wait() error!");
+        error("epoll_wait() error!");
 }
 
 //póki co można się łączyć z tego samego IP kilka razy
@@ -198,7 +200,7 @@ Client acceptClient(int serverSock)
 
     clientSocket = accept(serverSock, (sockaddr*)&clientInfo, &clientInfoSize);
     if (clientSocket == -1)
-      error("accept() error!");
+        error("accept() error!");
 
     return Client(clientSocket, inet_ntoa(clientInfo.sin_addr), ntohs(clientInfo.sin_port));
 }
@@ -218,6 +220,14 @@ void manageClients(int serverSocket, epoll_event &event, deque<Client> &clients)
             }
 
             printf("I've got new message: %s", buf);
+
+            string key = buf;
+            int index = key.find("Sec-WebSocket-Key: "); 
+            key = key.substr(index + 19, 24) + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+            string msg = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + sha1(key) + "\r\n\r\n";
+            printf("Message to client:\n%s", msg.c_str());
+            write((*client).fd, msg.c_str(), msg.size());
         }
     }
 }
@@ -241,6 +251,6 @@ bool readMessage(deque<Client>::iterator &client, char* buf)
 }
 
 void error(string errorMessage) {
-  perror(errorMessage.c_str());
-  exit(0);
+    perror(errorMessage.c_str());
+    exit(0);
 }

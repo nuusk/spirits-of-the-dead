@@ -1,7 +1,7 @@
 //make connection
 const serverAddr = 'http://localhost';
 //const serverAddr = '192.168.8.107';
-const port = 1253;
+const port = 1252;
 const socket = io.connect(serverAddr + ':' + port);
 
 const message = document.getElementById('message');
