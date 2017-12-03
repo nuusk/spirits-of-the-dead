@@ -241,6 +241,6 @@ bool readMessage(deque<Client>::iterator &client, char* buf)
 }
 
 void error(string errorMessage) {
-  perror (errorMessage);
+  perror(errorMessage.c_str());
   exit(0);
 }
