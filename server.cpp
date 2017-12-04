@@ -10,7 +10,7 @@
 #include <cstring>
 #include <string>
 
-#include "sha1.h"
+#include "sha1.hpp"
 
 #define PORT 1252
 #define BUF_SIZE 65536
@@ -92,7 +92,7 @@ void createSocket(int &sock)
 void setSocketOption(int sock)
 {
     const int one = 1;
-    int result = setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one));
+    int result = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
     if (result == -1)   
         error("setsockopt() error!");
 }
@@ -205,6 +205,59 @@ Client acceptClient(int serverSock)
     return Client(clientSocket, inet_ntoa(clientInfo.sin_addr), ntohs(clientInfo.sin_port));
 }
 
+
+static inline bool is_base64(unsigned char c) {
+  return (isalnum(c) || (c == '+') || (c == '/'));
+}
+
+static const std::string base64_chars = 
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+             "abcdefghijklmnopqrstuvwxyz"
+             "0123456789+/";
+
+std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len) {
+  std::string ret;
+  int i = 0;
+  int j = 0;
+  unsigned char char_array_3[3];
+  unsigned char char_array_4[4];
+
+  while (in_len--) {
+    char_array_3[i++] = *(bytes_to_encode++);
+    if (i == 3) {
+      char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+      char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+      char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+      char_array_4[3] = char_array_3[2] & 0x3f;
+
+      for(i = 0; (i <4) ; i++)
+        ret += base64_chars[char_array_4[i]];
+      i = 0;
+    }
+  }
+
+  if (i)
+  {
+    for(j = i; j < 3; j++)
+      char_array_3[j] = '\0';
+
+    char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+    char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+    char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+    char_array_4[3] = char_array_3[2] & 0x3f;
+
+    for (j = 0; (j < i + 1); j++)
+      ret += base64_chars[char_array_4[j]];
+
+    while((i++ < 3))
+      ret += '=';
+
+  }
+
+  return ret;
+
+}
+
 void manageClients(int serverSocket, epoll_event &event, deque<Client> &clients)
 {
     char buf[BUF_SIZE];
@@ -219,14 +272,23 @@ void manageClients(int serverSocket, epoll_event &event, deque<Client> &clients)
                 break;
             }
 
-            printf("I've got new message: %s", buf);
+            printf("I've got new message:\n%s", buf);
 
+            SHA1 checksum;
             string key = buf;
             int index = key.find("Sec-WebSocket-Key: "); 
-            key = key.substr(index + 19, 24) + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-
-            string msg = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + sha1(key) + "\r\n\r\n";
-            printf("Message to client:\n%s", msg.c_str());
+            key = key.substr(index + 19, 24) +"258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+            checksum.update(key);
+            string abc = checksum.final();
+            uint32_t* tab = checksum.final2();
+            //openssl 
+            //boost 
+            string msg = "HTTP/1.1 101 Switching Protocols\r\n"
+            "Upgrade: websocket\r\n"
+            "Connection: Upgrade\r\n"
+            "Sec-WebSocket-Accept: " + base64_encode((const unsigned char *)tab, 20) + "\r\n\r\n";
+            // string msg = "HTTP/1.1 101 Switching Protocols\r\nAccess-Control-Allow-Origin: http://localhost:1253\r\nAccess-Control-Allow-Credentials: true\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n";
+            printf("Message to client:\n%s", msg.c_str());            
             write((*client).fd, msg.c_str(), msg.size());
         }
     }
@@ -234,7 +296,7 @@ void manageClients(int serverSocket, epoll_event &event, deque<Client> &clients)
 
 void removeClient(deque<Client>::iterator &client, deque<Client> &clients)
 {
-    printf("Removing client: %s:%hu (fd: %d)\n", (*client).address, (*client).port, (*client).fd);
+    printf("\nRemoving client: %s:%hu (fd: %d)\n", (*client).address, (*client).port, (*client).fd);
     close((*client).fd);
     clients.erase(client);
 }
