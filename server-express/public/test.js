@@ -1,7 +1,13 @@
 var socket = new WebSocket("ws://localhost:1252");
 
-console.log(socket);
+socket.onmessage = function(event){
+    console.log("ONMESSAGE: " + event.data);
+}
 
-socket.addEventListener('message', function (event) {
-    console.log('Message from server ', event.data);
-});
+socket.onopen = function(event){
+    console.log("Socket: Connected!")
+}
+
+socket.onclose = function(event){
+    console.log("Socket: Connection closed!");
+}

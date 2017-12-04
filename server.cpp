@@ -9,11 +9,13 @@
 #include <deque>
 #include <cstring>
 #include <string>
+#include <sstream>
 
 #include "sha1.hpp"
 
 #define PORT 1252
 #define BUF_SIZE 65536
+#define MAGIC_STRING "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 using namespace std;
 
@@ -22,12 +24,14 @@ struct Client
     int fd;
     char* address;
     int port;
+    bool handshake;
 
     Client(int f, char* ip, int p)
     {
         fd = f;
         address = ip;
         port = p;
+        handshake = false;
     }
 };
 
@@ -49,8 +53,9 @@ bool isAlreadyConnected(Client client, deque<Client> clients);
 void removeCheater(Client client);
 void manageClients(int serverSocket, epoll_event &event, deque<Client> &clients);
 void removeClient(deque<Client>::iterator &client, deque<Client> &clients);
-bool readMessage(deque<Client>::iterator &client, char* buf);
-
+bool readMessage(Client &client, char* buf);
+bool doHandshake(Client &client, string text);
+bool writeMessage(char* message, Client &client);
 
 int main(int argc, char** argv)
 {
@@ -172,7 +177,7 @@ void addNewClient(int serverSock, int epollFd, epoll_event &event, deque<Client>
 
     addEpollEvent(client.fd, epollFd, event);
     clients.push_back(client);
-    printf("New connection from: %s:%hu (fd: %d)\n", client.address, client.port, client.fd);
+    printf("\nNew connection from: %s:%hu (fd: %d)\n", client.address, client.port, client.fd);
 }
 
 bool isAlreadyConnected(Client client, deque<Client> clients)
@@ -188,7 +193,7 @@ bool isAlreadyConnected(Client client, deque<Client> clients)
 
 void removeCheater(Client client)
 {
-    printf("Client: %s:%hu (fd : %d) is trying to cheat! Removing him...\n", client.address, client.port, client.fd);
+    printf("\nClient: %s:%hu (fd : %d) is trying to cheat! Removing him...\n", client.address, client.port, client.fd);
     close(client.fd);
 }
 
@@ -205,59 +210,6 @@ Client acceptClient(int serverSock)
     return Client(clientSocket, inet_ntoa(clientInfo.sin_addr), ntohs(clientInfo.sin_port));
 }
 
-
-static inline bool is_base64(unsigned char c) {
-  return (isalnum(c) || (c == '+') || (c == '/'));
-}
-
-static const std::string base64_chars = 
-             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-             "abcdefghijklmnopqrstuvwxyz"
-             "0123456789+/";
-
-std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len) {
-  std::string ret;
-  int i = 0;
-  int j = 0;
-  unsigned char char_array_3[3];
-  unsigned char char_array_4[4];
-
-  while (in_len--) {
-    char_array_3[i++] = *(bytes_to_encode++);
-    if (i == 3) {
-      char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-      char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-      char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-      char_array_4[3] = char_array_3[2] & 0x3f;
-
-      for(i = 0; (i <4) ; i++)
-        ret += base64_chars[char_array_4[i]];
-      i = 0;
-    }
-  }
-
-  if (i)
-  {
-    for(j = i; j < 3; j++)
-      char_array_3[j] = '\0';
-
-    char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-    char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-    char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-    char_array_4[3] = char_array_3[2] & 0x3f;
-
-    for (j = 0; (j < i + 1); j++)
-      ret += base64_chars[char_array_4[j]];
-
-    while((i++ < 3))
-      ret += '=';
-
-  }
-
-  return ret;
-
-}
-
 void manageClients(int serverSocket, epoll_event &event, deque<Client> &clients)
 {
     char buf[BUF_SIZE];
@@ -266,30 +218,24 @@ void manageClients(int serverSocket, epoll_event &event, deque<Client> &clients)
     {
         if (event.events == EPOLLIN && event.data.fd == (*client).fd)
         {
-            if(!readMessage(client, buf))
+            if(!readMessage(*client, buf))
             {
                 removeClient(client, clients);
                 break;
             }
-
-            printf("I've got new message:\n%s", buf);
-
-            SHA1 checksum;
-            string key = buf;
-            int index = key.find("Sec-WebSocket-Key: "); 
-            key = key.substr(index + 19, 24) +"258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-            checksum.update(key);
-            string abc = checksum.final();
-            uint32_t* tab = checksum.final2();
-            //openssl 
-            //boost 
-            string msg = "HTTP/1.1 101 Switching Protocols\r\n"
-            "Upgrade: websocket\r\n"
-            "Connection: Upgrade\r\n"
-            "Sec-WebSocket-Accept: " + base64_encode((const unsigned char *)tab, 20) + "\r\n\r\n";
-            // string msg = "HTTP/1.1 101 Switching Protocols\r\nAccess-Control-Allow-Origin: http://localhost:1253\r\nAccess-Control-Allow-Credentials: true\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n";
-            printf("Message to client:\n%s", msg.c_str());            
-            write((*client).fd, msg.c_str(), msg.size());
+            
+            printf("\nI've got new message:\n%s", buf);
+            
+            if (!(*client).handshake)
+            {
+                if (!doHandshake(*client, buf))
+                {
+                    removeClient(client, clients);
+                    break;
+                }
+            }
+            else
+                writeMessage(buf, *client);
         }
     }
 }
@@ -301,18 +247,63 @@ void removeClient(deque<Client>::iterator &client, deque<Client> &clients)
     clients.erase(client);
 }
 
-bool readMessage(deque<Client>::iterator &client, char* buf)
+bool readMessage(Client &client, char* buf)
 {
     memset(buf, 0, BUF_SIZE);
 
-    int msgSize = read((*client).fd, buf, BUF_SIZE);
+    int msgSize = read(client.fd, buf, BUF_SIZE);
     if (msgSize < 1)
         return false;
 
     return true;
 }
 
-void error(string errorMessage) {
+void error(string errorMessage) 
+{
     perror(errorMessage.c_str());
     exit(0);
+}
+
+bool doHandshake(Client &client, string text)
+{
+    int index = text.find("Sec-WebSocket-Key: "); 
+    string key = text.substr(index + 19, 24) + MAGIC_STRING;
+    
+    char base64[SHA1_BASE64_SIZE];
+    sha1(key.c_str()).finalize().print_base64(base64);
+    
+    stringstream ss;
+    ss << "HTTP/1.1 101 Switching Protocols\r\n" <<
+    "Upgrade: websocket\r\n" <<
+    "Connection: Upgrade\r\n" <<
+    "Content-Type: text/plain\r\n" <<
+    "Sec-WebSocket-Accept: " <<
+    base64 << "\r\n" <<
+    // "Accept: text/plain\r\n" <<
+    // "Accept-Encoding: gzip, deflate\r\n" <<
+    // "Accept-Charset: utf-8\r\n" <<
+    "\r\n";
+
+    if (!writeMessage(const_cast<char*>(ss.str().c_str()), client))
+        return false;
+
+    client.handshake = true;
+    return true;
+}
+#include <iostream>
+#include <fstream>
+bool writeMessage(char* message, Client &client)
+{
+    string msg = message;
+    printf("\nMessage to client:\n%s", message);            
+    
+    ofstream f;
+    f.open("a.txt");
+    f << msg << endl;
+    f.close();
+    int result = write(client.fd, message, strlen(message));
+    if (result == -1)
+        return false;
+
+    return true;
 }
