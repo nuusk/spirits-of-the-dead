@@ -22,12 +22,16 @@ struct Client
     int fd;
     char* address;
     int port;
+    string name;
+    bool readyToPlay;
 
     Client(int f, char* ip, int p)
     {
         fd = f;
         address = ip;
         port = p;
+        name = "";
+        readyToPlay = false;
     }
 
     bool operator==(const Client &rhs)
@@ -44,32 +48,28 @@ struct Client
 struct GameManager 
 {
     const int playersToStart = 2;
-    int playersCount = 0;
+    const string welcomeText = "Hello! It's 'Spirit of the Dead' text game. Enjoy!\n";
+    
     bool gameStarted = false;
     vector<Client> clients;
-    string welcomeText = "Hello! It's 'Spirit of the Dead' text game. Enjoy!\n";
+    int readyPlayersCount = 0;
     
-    bool gameStartCheck()
-    {
-        if (gameStarted)
-            return false;
-
-        if (playersCount == playersToStart)
-        {
-            cout << "GameManager: zaczynamy grę" << endl;
-            gameStarted = true;
-            return true;
-        }
-
-        return false;
-    }
-
-    string getOnlinePlayersText()
+    string getPlayersInfo()
     {
         stringstream ss;
-        ss << "Players in game: " << clients.size() << endl;
-        
+        ss << "Players online: " << clients.size() << endl
+           << "Players ready: " << readyPlayersCount << endl;
+
         return ss.str(); 
+    }
+
+    void gameStartCheck()
+    {
+        if ((int)clients.size() >= playersToStart && (int)clients.size() == readyPlayersCount)
+        {
+            cout << "GameManager: Enough players to start the game! Let's play!" << endl;
+            gameStarted = true;
+        }
     }
 };
 
@@ -88,17 +88,20 @@ void update(int serverSocket, int epollFd, epoll_event &event, GameManager &gm);
 void epollWait(int fd, epoll_event &event);
 void addNewClient(int serverSock, int epollFd, epoll_event &event, GameManager &gm);
 Client acceptClient(int serverSock);
+void rejectClient(int serverSock);
 bool isAlreadyConnected(Client client, vector<Client> &clients);
 void removeCheater(Client client);
 void handleClients(GameManager &gm, epoll_event &event);
 void removeClient(GameManager &gm, int index);
 bool readMessage(Client &client, char* buf);
 bool writeMessage(string message, Client &client);
-void processMessage(string message, Client &sender, GameManager &gm);
 void sendMessageToAll(string message, GameManager &gm);
 void sendMessageToAll(string message, GameManager &gm, Client &sender);
 void waitForClients(GameManager &gm, epoll_event &event);
 void playGame(GameManager &gm, epoll_event &event);
+void processMessage(string message, Client &client, GameManager &gm);
+void setClientName(Client &client, string name);
+void setClientReady(Client &client, GameManager &gm);
 
 int main(int argc, char** argv)
 {
@@ -195,11 +198,14 @@ void update(int serverSocket, int epollFd, epoll_event &event, GameManager &gm)
 
     if (event.events == EPOLLIN && event.data.fd == serverSocket)
     {
-        addNewClient(serverSocket, epollFd, event, gm);
-        sendMessageToAll(gm.getOnlinePlayersText(), gm);
+        if (gm.gameStarted) 
+        {
+            rejectClient(serverSocket);
+            return;
+        }
 
-        if (gm.gameStartCheck())
-            sendMessageToAll("Game has started!\n", gm);        
+        addNewClient(serverSocket, epollFd, event, gm);
+        sendMessageToAll(gm.getPlayersInfo(),  gm);      
     }
     else
         handleClients(gm, event);
@@ -224,7 +230,6 @@ void addNewClient(int serverSock, int epollFd, epoll_event &event, GameManager &
 
     addEpollEvent(client.fd, epollFd, event);
     gm.clients.push_back(client);
-    gm.playersCount++;
 
     cout << "New connection from: " << client.address << ":" << client.port << " fd: " <<  client.fd << endl;
     writeMessage(gm.welcomeText, client);
@@ -243,7 +248,7 @@ bool isAlreadyConnected(Client client, vector<Client> &clients)
 
 void removeCheater(Client client)
 {
-    cout << "Client: " << client.address << ":" << client.port << " fd: " << client.fd << "is trying to cheat! Removing him...\n" << endl;
+    cout << "Client: " << client.address << ":" << client.port << " fd: " << client.fd << " is trying to cheat! Removing him..." << endl;
     writeMessage("Bye bye, cheater!\n", client);
     close(client.fd);
 }
@@ -261,6 +266,15 @@ Client acceptClient(int serverSock)
     return Client(socket, inet_ntoa(clientInfo.sin_addr), ntohs(clientInfo.sin_port));
 }
 
+void rejectClient(int serverSock)
+{
+    Client client = acceptClient(serverSock);
+    
+    cout << "Client: " << client.address << ":" << client.port << " fd: " << client.fd << " wanted to connect while the game is running. Removing him..." << endl;    
+    writeMessage("The game has already started! Please try again later!\n", client);
+    close(client.fd);
+}
+
 void handleClients(GameManager &gm, epoll_event &event)
 {
     if (!gm.gameStarted)
@@ -274,7 +288,6 @@ void removeClient(GameManager &gm, int k)
     cout << "Removing client: " << gm.clients[k].address << ":" << gm.clients[k].port << " fd: " << gm.clients[k].fd << endl;
     close(gm.clients[k].fd);
     gm.clients.erase(gm.clients.begin() + k);
-    gm.playersCount--;
 }
 
 bool readMessage(Client &client, char* buf)
@@ -296,19 +309,11 @@ void error(string errorMessage)
 
 bool writeMessage(string message, Client &client)
 {
-    cout << "Message to client: " << message;            
-    
     int result = write(client.fd, message.c_str(), message.size());
     if (result == -1)
         return false;
 
     return true;
-}
-
-//TODO
-void processMessage(string message, Client &sender, GameManager &gm)
-{
-
 }
 
 void sendMessageToAll(string message, GameManager &gm)
@@ -345,6 +350,8 @@ void waitForClients(GameManager &gm, epoll_event &event)
                 removeClient(gm, i);
                 break;
             }
+                
+            processMessage(buf, gm.clients[i], gm);
         }
     }
 }
@@ -363,7 +370,38 @@ void playGame(GameManager &gm, epoll_event &event)
                 break;
             }
 
-            sendMessageToAll(buf, gm);
+            // processMessage(buf, gm);
         }
     }
+}
+
+void processMessage(string message, Client &client, GameManager &gm)
+{
+    cout << "Processing message: " << message << endl;
+
+    if (message.find("name") != string::npos)
+        setClientName(client, message.substr(message.find("name") +  5));
+   
+    else if (message.find("ready") != string::npos)
+        setClientReady(client, gm);
+}
+
+void setClientName(Client &client, string name)
+{
+    if (client.name != "")
+        return;
+
+    client.name = name;
+    cout << "Set name of " << client.address << ":" << client.port << " fd: " << client.fd << " to '" << name << "'" << endl; 
+}
+
+void setClientReady(Client &client, GameManager &gm)
+{
+    client.readyToPlay = true;
+    gm.readyPlayersCount++;
+
+    sendMessageToAll(gm.getPlayersInfo(), gm);
+    cout << "Player: " << client.name << " is ready!" << endl; 
+
+    gm.gameStartCheck();
 }
