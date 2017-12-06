@@ -18,33 +18,21 @@ client.connect(port, address, () => {
 //listen for the keypress event
 process.stdin.on('keypress', (ch, key) => {
   // console.log('got "keypress"', key);
-  console.log(key);
+  //console.log(key);
   client.write(JSON.stringify(key));
   if (key && key.ctrl && key.name == 'c') {
     process.stdin.pause();
+    client.destroy();
   }
 });
 
 process.stdin.setRawMode(true);
 process.stdin.resume();
 
-
-
-
-
-/*
-
-function saySomething() {
-  client.send("elo");
-}
-
-client.on('data', function(data) {
+client.on('data', (data) => {
 	console.log('Received: ' + data);
-	//client.destroy(); // kill client after server's response
-  saySomething();
 });
 
-client.on('close', function() {
+client.on('close', () => {
 	console.log('Connection closed');
 });
-*/
