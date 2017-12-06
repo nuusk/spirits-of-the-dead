@@ -21,8 +21,7 @@ process.stdin.on('keypress', (ch, key) => {
   //console.log(key);
   client.write(JSON.stringify(key));
   if (key && key.ctrl && key.name == 'c') {
-    process.stdin.pause();
-    client.destroy();
+    quit();
   }
 });
 
@@ -30,9 +29,19 @@ process.stdin.setRawMode(true);
 process.stdin.resume();
 
 client.on('data', (data) => {
-	console.log('Received: ' + data);
+	console.log('Server: ' + data);
 });
 
 client.on('close', () => {
 	console.log('Connection closed');
 });
+
+client.on('error', (err) => {
+  console.log('Error: ' + err);
+  quit();
+});
+
+function quit() {
+  client.destroy();
+  process.stdin.pause();
+}
