@@ -11,8 +11,6 @@
 #include <string>
 #include <sstream>
 
-#include "sha1.hpp"
-
 #define PORT 1252
 #define BUF_SIZE 65536
 #define MAGIC_STRING "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -226,16 +224,7 @@ void manageClients(int serverSocket, epoll_event &event, deque<Client> &clients)
             
             printf("\nI've got new message:\n%s", buf);
             
-            if (!(*client).handshake)
-            {
-                if (!doHandshake(*client, buf))
-                {
-                    removeClient(client, clients);
-                    break;
-                }
-            }
-            else
-                writeMessage(buf, *client);
+            writeMessage(buf, *client);
         }
     }
 }
@@ -264,43 +253,11 @@ void error(string errorMessage)
     exit(0);
 }
 
-bool doHandshake(Client &client, string text)
-{
-    int index = text.find("Sec-WebSocket-Key: "); 
-    string key = text.substr(index + 19, 24) + MAGIC_STRING;
-    
-    char base64[SHA1_BASE64_SIZE];
-    sha1(key.c_str()).finalize().print_base64(base64);
-    
-    stringstream ss;
-    ss << "HTTP/1.1 101 Switching Protocols\r\n" <<
-    "Upgrade: websocket\r\n" <<
-    "Connection: Upgrade\r\n" <<
-    "Content-Type: text/plain\r\n" <<
-    "Sec-WebSocket-Accept: " <<
-    base64 << "\r\n" <<
-    // "Accept: text/plain\r\n" <<
-    // "Accept-Encoding: gzip, deflate\r\n" <<
-    // "Accept-Charset: utf-8\r\n" <<
-    "\r\n";
-
-    if (!writeMessage(const_cast<char*>(ss.str().c_str()), client))
-        return false;
-
-    client.handshake = true;
-    return true;
-}
-#include <iostream>
-#include <fstream>
 bool writeMessage(char* message, Client &client)
 {
     string msg = message;
     printf("\nMessage to client:\n%s", message);            
     
-    ofstream f;
-    f.open("a.txt");
-    f << msg << endl;
-    f.close();
     int result = write(client.fd, message, strlen(message));
     if (result == -1)
         return false;
