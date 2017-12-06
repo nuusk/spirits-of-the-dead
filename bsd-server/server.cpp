@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cstdlib>
 #include <cstdio>
 #include <unistd.h>
@@ -13,7 +14,6 @@
 
 #define PORT 1252
 #define BUF_SIZE 65536
-#define MAGIC_STRING "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 using namespace std;
 
@@ -41,6 +41,39 @@ struct Client
     }
 };
 
+struct GameManager 
+{
+    const int playersToStart = 2;
+    int playersCount = 0;
+    bool gameStarted = false;
+    vector<Client> clients;
+    string welcomeText = "Hello! It's 'Spirit of the Dead' text game. Enjoy!\n";
+    
+    bool gameStartCheck()
+    {
+        if (gameStarted)
+            return false;
+
+        if (playersCount == playersToStart)
+        {
+            cout << "GameManager: zaczynamy grę" << endl;
+            gameStarted = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    string getOnlinePlayersText()
+    {
+        stringstream ss;
+        ss << "Players in game: " << clients.size() << endl;
+        
+        return ss.str(); 
+    }
+};
+
+
 void error(string);
 void prepareSocket(int &sock, sockaddr_in &address);
 void createSocket(int &sock);
@@ -51,33 +84,35 @@ void startListening(int sock);
 void prepareEpoll(int sock, int &fd, epoll_event &event);
 void createEpollFd(int &fd);
 void addEpollEvent(int sock, int fd, epoll_event &event);
-void update(int serverSocket, int epollFd, epoll_event &event, vector<Client> &clients);
+void update(int serverSocket, int epollFd, epoll_event &event, GameManager &gm);
 void epollWait(int fd, epoll_event &event);
-void addNewClient(int serverSock, int epollFd, epoll_event &event, vector<Client> &clients);
+void addNewClient(int serverSock, int epollFd, epoll_event &event, GameManager &gm);
 Client acceptClient(int serverSock);
-bool isAlreadyConnected(Client client, vector<Client> clients);
+bool isAlreadyConnected(Client client, vector<Client> &clients);
 void removeCheater(Client client);
-void handleClients(int serverSocket, epoll_event &event, vector<Client> &clients);
-void removeClient(vector<Client> &clients, int index);
+void handleClients(GameManager &gm, epoll_event &event);
+void removeClient(GameManager &gm, int index);
 bool readMessage(Client &client, char* buf);
-bool writeMessage(char* message, Client &client);
-void processMessage(char* message, Client &sender, vector<Client> &clients);
-void sendMessageToAll(char* message, vector<Client> &clients);
-void sendMessageToAll(char* message, vector<Client> &clients, Client &sender);
+bool writeMessage(string message, Client &client);
+void processMessage(string message, Client &sender, GameManager &gm);
+void sendMessageToAll(string message, GameManager &gm);
+void sendMessageToAll(string message, GameManager &gm, Client &sender);
+void waitForClients(GameManager &gm, epoll_event &event);
+void playGame(GameManager &gm, epoll_event &event);
 
 int main(int argc, char** argv)
 {
+    GameManager gameManager;
     int serverSocket;
     sockaddr_in address;
     int epollFd;
     epoll_event event;
-    vector<Client> clients;
 
     prepareSocket(serverSocket, address);
     prepareEpoll(serverSocket, epollFd, event);
 
     while (true)
-        update(serverSocket, epollFd, event, clients);
+        update(serverSocket, epollFd, event, gameManager);
 
     close(serverSocket);
     close(epollFd);
@@ -154,16 +189,20 @@ void addEpollEvent(int sock, int fd, epoll_event &event)
         error("epoll_ctl() error!");
 }
 
-void update(int serverSocket, int epollFd, epoll_event &event, vector<Client> &clients)
+void update(int serverSocket, int epollFd, epoll_event &event, GameManager &gm)
 {
     epollWait(epollFd, event);
 
     if (event.events == EPOLLIN && event.data.fd == serverSocket)
-        addNewClient(serverSocket, epollFd, event, clients);
+    {
+        addNewClient(serverSocket, epollFd, event, gm);
+        sendMessageToAll(gm.getOnlinePlayersText(), gm);
 
+        if (gm.gameStartCheck())
+            sendMessageToAll("Game has started!\n", gm);        
+    }
     else
-        handleClients(serverSocket, event, clients);
-
+        handleClients(gm, event);
 }
 
 void epollWait(int fd, epoll_event &event)
@@ -174,21 +213,24 @@ void epollWait(int fd, epoll_event &event)
 }
 
 //póki co można się łączyć z tego samego IP kilka razy
-void addNewClient(int serverSock, int epollFd, epoll_event &event, vector<Client> &clients)
+void addNewClient(int serverSock, int epollFd, epoll_event &event, GameManager &gm)
 {
     Client client = acceptClient(serverSock);
-    // if (isAlreadyConnected(client, clients))
+    // if (isAlreadyConnected(client, gm.clients))
     // {
     //     removeCheater(client);
     //     return;
     // }
 
     addEpollEvent(client.fd, epollFd, event);
-    clients.push_back(client);
-    printf("\nNew connection from: %s:%hu (fd: %d)\n", client.address, client.port, client.fd);
+    gm.clients.push_back(client);
+    gm.playersCount++;
+
+    cout << "New connection from: " << client.address << ":" << client.port << " fd: " <<  client.fd << endl;
+    writeMessage(gm.welcomeText, client);
 }
 
-bool isAlreadyConnected(Client client, vector<Client> clients)
+bool isAlreadyConnected(Client client, vector<Client> &clients)
 {
     for (Client c : clients)
     {
@@ -201,50 +243,38 @@ bool isAlreadyConnected(Client client, vector<Client> clients)
 
 void removeCheater(Client client)
 {
-    printf("\nClient: %s:%hu (fd : %d) is trying to cheat! Removing him...\n", client.address, client.port, client.fd);
+    cout << "Client: " << client.address << ":" << client.port << " fd: " << client.fd << "is trying to cheat! Removing him...\n" << endl;
+    writeMessage("Bye bye, cheater!\n", client);
     close(client.fd);
 }
 
 Client acceptClient(int serverSock)
 {
-    int clientSocket;
+    int socket;
     sockaddr_in clientInfo;
     socklen_t clientInfoSize = sizeof(clientInfo);
 
-    clientSocket = accept(serverSock, (sockaddr*)&clientInfo, &clientInfoSize);
-    if (clientSocket == -1)
+    socket = accept(serverSock, (sockaddr*)&clientInfo, &clientInfoSize);
+    if (socket == -1)
         error("accept() error!");
 
-    return Client(clientSocket, inet_ntoa(clientInfo.sin_addr), ntohs(clientInfo.sin_port));
+    return Client(socket, inet_ntoa(clientInfo.sin_addr), ntohs(clientInfo.sin_port));
 }
 
-void handleClients(int serverSocket, epoll_event &event, vector<Client> &clients)
+void handleClients(GameManager &gm, epoll_event &event)
 {
-    char buf[BUF_SIZE];
-
-    for (int i = 0; i < (int)clients.size(); i++)
-    {
-        if (event.events == EPOLLIN && event.data.fd == clients[i].fd)
-        {
-            if(!readMessage(clients[i], buf))
-            {
-                removeClient(clients, i);
-                break;
-            }
-            
-            printf("\nI've got new message:\n%s", buf);
-            
-            sendMessageToAll(buf, clients, clients[i]);
-            sendMessageToAll(buf, clients);
-        }
-    }
+    if (!gm.gameStarted)
+        waitForClients(gm, event);
+    else
+        playGame(gm, event);
 }
 
-void removeClient(vector<Client> &clients, int k)
+void removeClient(GameManager &gm, int k)
 {
-    printf("\nRemoving client: %s:%hu (fd: %d)\n", clients[k].address, clients[k].port, clients[k].fd);
-    close(clients[k].fd);
-    clients.erase(clients.begin() + k);
+    cout << "Removing client: " << gm.clients[k].address << ":" << gm.clients[k].port << " fd: " << gm.clients[k].fd << endl;
+    close(gm.clients[k].fd);
+    gm.clients.erase(gm.clients.begin() + k);
+    gm.playersCount--;
 }
 
 bool readMessage(Client &client, char* buf)
@@ -264,40 +294,76 @@ void error(string errorMessage)
     exit(0);
 }
 
-bool writeMessage(char* message, Client &client)
+bool writeMessage(string message, Client &client)
 {
-    string msg = message;
-    printf("\nMessage to client:\n%s", message);            
+    cout << "Message to client: " << message;            
     
-    int result = write(client.fd, message, strlen(message));
+    int result = write(client.fd, message.c_str(), message.size());
     if (result == -1)
         return false;
 
     return true;
 }
 
-void processMessage(char* message, Client &sender, vector<Client> &clients)
+//TODO
+void processMessage(string message, Client &sender, GameManager &gm)
 {
-    //TODO
+
 }
 
-void sendMessageToAll(char* message, vector<Client> &clients)
+void sendMessageToAll(string message, GameManager &gm)
 {
-    for (int i = 0; i < (int)clients.size(); i++)
+    for (int i = 0; i < (int)gm.clients.size(); i++)
     {
-        if (!writeMessage(message, clients[i]))
-            removeClient(clients, i);
+        if (!writeMessage(message, gm.clients[i]))
+            removeClient(gm, i);
     }
 }
 
-void sendMessageToAll(char* message, vector<Client> &clients, Client &sender)
+void sendMessageToAll(string message, GameManager &gm, Client &sender)
 {
-    for (int i = 0; i < (int)clients.size(); i++)    
+    for (int i = 0; i < (int)gm.clients.size(); i++)    
     {
-        if (clients[i] == sender)
+        if (gm.clients[i] == sender)
             continue;
 
-        if (!writeMessage(message, clients[i]))
-            removeClient(clients, i);
+        if (!writeMessage(message, gm.clients[i]))
+            removeClient(gm, i);
+    }
+}
+
+void waitForClients(GameManager &gm, epoll_event &event)
+{
+    char buf[BUF_SIZE];
+    
+    for (int i = 0; i < (int)gm.clients.size(); i++)
+    {
+        if (event.events == EPOLLIN && event.data.fd == gm.clients[i].fd)
+        {
+            if(!readMessage(gm.clients[i], buf))
+            {
+                removeClient(gm, i);
+                break;
+            }
+        }
+    }
+}
+
+void playGame(GameManager &gm, epoll_event &event)
+{
+    char buf[BUF_SIZE];
+    
+    for (int i = 0; i < (int)gm.clients.size(); i++)
+    {
+        if (event.events == EPOLLIN && event.data.fd == gm.clients[i].fd)
+        {
+            if(!readMessage(gm.clients[i], buf))
+            {
+                removeClient(gm, i);
+                break;
+            }
+
+            sendMessageToAll(buf, gm);
+        }
     }
 }
