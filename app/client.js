@@ -1,7 +1,9 @@
+"use strict";
 const net = require('net');
 const stdin = process.openStdin();
 const keypress = require('keypress');
-const address = '192.168.8.106';
+//const address = '192.168.8.106';
+const address = 'localhost';
 const port = 1252;
 
 //emitt keypress events by stdin
