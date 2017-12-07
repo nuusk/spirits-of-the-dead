@@ -14,3 +14,4 @@ wszystko wysyła w lowercasie
 - wysyła swoją nazwę (póki co: name <imie>)
 - klika przycisk READY (póki co wiadomość: ready)
 - klika przycisk READY ponownie (póki co wiadomosć: notready) 
+- możliwość czatowania (póki co: chat <wiadomość>)

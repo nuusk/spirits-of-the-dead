@@ -25,6 +25,7 @@ struct Client
     int port;
     string name;
     bool readyToPlay;
+    bool answered;
 
     Client(int f, char* ip, int p)
     {
@@ -33,6 +34,7 @@ struct Client
         port = p;
         name = getRandomName();
         readyToPlay = false;
+        answered = false;
     }
 
     bool operator==(const Client &rhs)
@@ -60,6 +62,7 @@ struct Stage
 {
     string text;
     vector<string> answers;
+    vector<int> answersStats;
     int timer;
     bool shown;
 
@@ -67,33 +70,72 @@ struct Stage
     {
         text = txt;
         answers = a;
+        answersStats = vector<int>(a.size(), 0);
         timer = t;
         shown = false;
+    }
+
+    string getMostPopularAnswer()
+    {
+        int max = 0;
+        string answer = "";
+
+        for (int i = 0; i < (int)answersStats.size(); i++)
+        {
+            if (answersStats[i] > max)
+            {
+                max = answersStats[i]; 
+                answer = answers[i];
+            }
+        }
+
+        return answer;
     }
 };
 
 struct GameManager 
 {
     const int playersToStart = 2;
-    const string welcomeText = "Hello! It's 'Spirit of the Dead' text game. Enjoy!\n";
-    
+
     bool gameCanBeStarted = false;
     bool gameStarted = false;
     vector<Client> clients;
     int readyPlayersCount = 0;
     
     int stageNumber = 1;
-    vector<Stage> stages;
     vector<string> a = {"Tak", "Nie"};
+    //ta zmienna do wyjebania!
     Stage stage = Stage("Poziom numer 1\nChcesz wygrać grę?", a);
+    vector<Stage> stages;
 
-    string getPlayersInfo()
+    string getLobbyPlayersInfo()
     {
         stringstream ss;
         ss << "Players online: " << clients.size() << endl
            << "Players ready: " << readyPlayersCount << endl;
 
         return ss.str(); 
+    }
+
+    string getStageAnswersInfo()
+    {
+        stringstream ss;
+        ss << "Answers: " << getPlayersWhoAnsweredNumber() << "/" << clients.size() << endl;
+        ss << "Most popular answer: " << stage.getMostPopularAnswer() << endl;
+        
+        return ss.str();
+    }
+
+    int getPlayersWhoAnsweredNumber()
+    {
+        int count = 0;
+        for (int i = 0; i < (int)clients.size(); i++)
+        {
+            if (clients[i].answered)
+                count++;
+        }
+
+        return count;
     }
 
     void gameStartCheck()
@@ -109,6 +151,12 @@ struct GameManager
     {
         return stage;
     }
+
+    void letClientsAnswer()
+    {   
+        for (int i = 0; i < (int)clients.size(); i++)
+            clients[i].answered = false;
+    }   
 };
 
 
@@ -142,7 +190,7 @@ void processMessageOnWaiting(string message, Client &client, GameManager &gm);
 void setClientName(Client &client, string name);
 void setClientReady(Client &client, GameManager &gm);
 void setClientNotReady(Client &client, GameManager &gm);
-void showStage(Stage &stage, GameManager &gm);
+void launchStage(Stage &stage, GameManager &gm);
 void processMessage(string message, Client &client, GameManager &gm);
 
 int main(int argc, char** argv)
@@ -243,7 +291,7 @@ void update(int serverSocket, int epollFd, epoll_event &event, GameManager &gm)
 
     if ((gm.gameStarted && !gm.stage.shown)||
         (gm.gameStarted && gm.stage.timer <= 0))
-        showStage(gm.stage, gm);
+        launchStage(gm.stage, gm);
  
     epollWait(epollFd, event);
 
@@ -256,7 +304,7 @@ void update(int serverSocket, int epollFd, epoll_event &event, GameManager &gm)
         }
 
         addNewClient(serverSocket, epollFd, event, gm);
-        sendMessageToAll(gm.getPlayersInfo(),  gm);      
+        sendMessageToAll(gm.getLobbyPlayersInfo(),  gm);      
     }
     else
         handleClients(gm, event);
@@ -270,6 +318,7 @@ void epollWait(int fd, epoll_event &event)
 }
 
 //póki co można się łączyć z tego samego IP kilka razy
+//zrobić możliwość reconnectowania z tego samego ip
 void addNewClient(int serverSock, int epollFd, epoll_event &event, GameManager &gm)
 {
     Client client = acceptClient(serverSock);
@@ -283,7 +332,7 @@ void addNewClient(int serverSock, int epollFd, epoll_event &event, GameManager &
     gm.clients.push_back(client);
 
     cout << "New connection from: " << client.address << ":" << client.port << " fd: " <<  client.fd << endl;
-    writeMessage(gm.welcomeText, client);
+    writeMessage("Hello! It's 'Spirit of the Dead' text game. Enjoy!\n", client);
 }
 
 bool isAlreadyConnected(Client client, vector<Client> &clients)
@@ -412,13 +461,16 @@ void processMessageOnWaiting(string message, Client &client, GameManager &gm)
     cout << "Processing message: " << message;
 
     if (message.find("name") != string::npos)
-        setClientName(client, message.substr(message.find("name") +  5));
+        setClientName(client, message.substr(message.find("name")+5));
    
     else if (message.find("notready") != string::npos)
         setClientNotReady(client, gm);
     
     else if (message.find("ready") != string::npos)
         setClientReady(client, gm);
+
+    else if (message.find("chat") != string::npos)
+        sendMessageToAll(client.name + ": " + message.substr(message.find("chat")+5), gm, client);
 }
 
 void setClientName(Client &client, string name)
@@ -435,7 +487,7 @@ void setClientReady(Client &client, GameManager &gm)
     client.readyToPlay = true;
     gm.readyPlayersCount++;
 
-    sendMessageToAll(gm.getPlayersInfo(), gm);
+    sendMessageToAll(gm.getLobbyPlayersInfo(), gm);
     cout << "Player: " << client.name << " is ready!" << endl; 
 
     gm.gameStartCheck();
@@ -449,7 +501,7 @@ void setClientNotReady(Client &client, GameManager &gm)
     client.readyToPlay = false;
     gm.readyPlayersCount--;
 
-    sendMessageToAll(gm.getPlayersInfo(), gm);
+    sendMessageToAll(gm.getLobbyPlayersInfo(), gm);
     cout << "Player: " << client.name << " is busy now!" << endl;     
 }
 
@@ -479,7 +531,7 @@ void playGame(GameManager &gm, epoll_event &event)
     }
 }
 
-void showStage(Stage &stage, GameManager &gm)
+void launchStage(Stage &stage, GameManager &gm)
 {
     stage.shown = true;
     
@@ -489,19 +541,26 @@ void showStage(Stage &stage, GameManager &gm)
         ss << i+1 << ": " << stage.answers[i] << endl;
     
     sendMessageToAll(ss.str(), gm);
+    gm.letClientsAnswer();
 }
 
+//porobić hermetyzację niektórych rzeczy
 void processMessage(string message, Client &client, GameManager &gm)
 {
     cout << "Processing message: " << message;
+
+    if (client.answered)
+        return;        
 
     for (int i = 0; i < (int)gm.stage.answers.size(); i++)
     {
         if (message.find(gm.stage.answers[i]) != string::npos)
         {
-            cout << client.name << " choice is: " << gm.stage.answers[i];
-            //zaktualizuj liste tych co wybrali
-            //nie pozwalaj zmienić, albo pozwól na zmianę
+            cout << client.name << " choice is: " << gm.stage.answers[i] << endl;
+            client.answered = true;
+            gm.stage.answersStats[i]++;
+            sendMessageToAll(gm.getStageAnswersInfo(), gm);
+
             return;
         }
     }
