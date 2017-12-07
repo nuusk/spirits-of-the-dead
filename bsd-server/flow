@@ -1,9 +1,3 @@
-Serwer: 
-czekam na graczy
-    przy połączeniu pokazuję tekst powitalny
-    pokazuję liczbę(później listę) aktualnie połączonych graczy
-jeżeli połączy się >= X graczy to wysyłam informację, że gra się rozpoczyna
-    ? gracze odsyłają informację typu OK
 gra się rozpoczyna - pokazuję 1 lvl
 odpalam timer 30 sekund
 czekam na odpowiedzi 
@@ -19,3 +13,4 @@ wszystko wysyła w lowercasie
 - łączy się
 - wysyła swoją nazwę (póki co: name <imie>)
 - klika przycisk READY (póki co wiadomość: ready)
+- klika przycisk READY ponownie (póki co wiadomosć: notready) 

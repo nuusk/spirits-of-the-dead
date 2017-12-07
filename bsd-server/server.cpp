@@ -11,6 +11,7 @@
 #include <cstring>
 #include <string>
 #include <sstream>
+#include <ctime>
 
 #define PORT 1252
 #define BUF_SIZE 65536
@@ -30,7 +31,7 @@ struct Client
         fd = f;
         address = ip;
         port = p;
-        name = "";
+        name = getRandomName();
         readyToPlay = false;
     }
 
@@ -43,6 +44,32 @@ struct Client
 
         return false;
     }
+
+    string getRandomName()
+    {
+        string value = "";
+
+        for (int i = 0; i < 10; i++)
+            value += rand() % 26 + 97; 
+
+        return value;
+    }
+};
+
+struct Stage
+{
+    string text;
+    vector<string> answers;
+    int timer;
+    bool shown;
+
+    Stage(string txt, vector<string> &a, int t = 10)
+    {
+        text = txt;
+        answers = a;
+        timer = t;
+        shown = false;
+    }
 };
 
 struct GameManager 
@@ -50,10 +77,16 @@ struct GameManager
     const int playersToStart = 2;
     const string welcomeText = "Hello! It's 'Spirit of the Dead' text game. Enjoy!\n";
     
+    bool gameCanBeStarted = false;
     bool gameStarted = false;
     vector<Client> clients;
     int readyPlayersCount = 0;
     
+    int stageNumber = 1;
+    vector<Stage> stages;
+    vector<string> a = {"Tak", "Nie"};
+    Stage stage = Stage("Poziom numer 1\nChcesz wygrać grę?", a);
+
     string getPlayersInfo()
     {
         stringstream ss;
@@ -68,8 +101,13 @@ struct GameManager
         if ((int)clients.size() >= playersToStart && (int)clients.size() == readyPlayersCount)
         {
             cout << "GameManager: Enough players to start the game! Let's play!" << endl;
-            gameStarted = true;
+            gameCanBeStarted = true;
         }
+    }
+
+    Stage& getStage()
+    {
+        return stage;
     }
 };
 
@@ -98,10 +136,14 @@ bool writeMessage(string message, Client &client);
 void sendMessageToAll(string message, GameManager &gm);
 void sendMessageToAll(string message, GameManager &gm, Client &sender);
 void waitForClients(GameManager &gm, epoll_event &event);
+void startGame(GameManager &gm);
 void playGame(GameManager &gm, epoll_event &event);
-void processMessage(string message, Client &client, GameManager &gm);
+void processMessageOnWaiting(string message, Client &client, GameManager &gm);
 void setClientName(Client &client, string name);
 void setClientReady(Client &client, GameManager &gm);
+void setClientNotReady(Client &client, GameManager &gm);
+void showStage(Stage &stage, GameManager &gm);
+void processMessage(string message, Client &client, GameManager &gm);
 
 int main(int argc, char** argv)
 {
@@ -110,6 +152,8 @@ int main(int argc, char** argv)
     sockaddr_in address;
     int epollFd;
     epoll_event event;
+
+    srand(time(0));    
 
     prepareSocket(serverSocket, address);
     prepareEpoll(serverSocket, epollFd, event);
@@ -194,6 +238,13 @@ void addEpollEvent(int sock, int fd, epoll_event &event)
 
 void update(int serverSocket, int epollFd, epoll_event &event, GameManager &gm)
 {
+    if (gm.gameCanBeStarted)
+        startGame(gm);
+
+    if ((gm.gameStarted && !gm.stage.shown)||
+        (gm.gameStarted && gm.stage.timer <= 0))
+        showStage(gm.stage, gm);
+ 
     epollWait(epollFd, event);
 
     if (event.events == EPOLLIN && event.data.fd == serverSocket)
@@ -351,9 +402,62 @@ void waitForClients(GameManager &gm, epoll_event &event)
                 break;
             }
                 
-            processMessage(buf, gm.clients[i], gm);
+            processMessageOnWaiting(buf, gm.clients[i], gm);
         }
     }
+}
+
+void processMessageOnWaiting(string message, Client &client, GameManager &gm)
+{
+    cout << "Processing message: " << message;
+
+    if (message.find("name") != string::npos)
+        setClientName(client, message.substr(message.find("name") +  5));
+   
+    else if (message.find("notready") != string::npos)
+        setClientNotReady(client, gm);
+    
+    else if (message.find("ready") != string::npos)
+        setClientReady(client, gm);
+}
+
+void setClientName(Client &client, string name)
+{
+    client.name = name;
+    cout << "Set name of " << client.address << ":" << client.port << " fd: " << client.fd << " to '" << name << "'" << endl; 
+}
+
+void setClientReady(Client &client, GameManager &gm)
+{
+    if (client.readyToPlay)
+        return;
+
+    client.readyToPlay = true;
+    gm.readyPlayersCount++;
+
+    sendMessageToAll(gm.getPlayersInfo(), gm);
+    cout << "Player: " << client.name << " is ready!" << endl; 
+
+    gm.gameStartCheck();
+}
+
+void setClientNotReady(Client &client, GameManager &gm)
+{
+    if (!client.readyToPlay)
+        return;
+
+    client.readyToPlay = false;
+    gm.readyPlayersCount--;
+
+    sendMessageToAll(gm.getPlayersInfo(), gm);
+    cout << "Player: " << client.name << " is busy now!" << endl;     
+}
+
+void startGame(GameManager &gm)
+{
+    gm.gameStarted = true;
+    gm.gameCanBeStarted = false;
+    sendMessageToAll("The game has started!\nGood luck\n",gm);
 }
 
 void playGame(GameManager &gm, epoll_event &event)
@@ -370,38 +474,37 @@ void playGame(GameManager &gm, epoll_event &event)
                 break;
             }
 
-            // processMessage(buf, gm);
+            processMessage(buf, gm.clients[i], gm);
         }
     }
 }
 
+void showStage(Stage &stage, GameManager &gm)
+{
+    stage.shown = true;
+    
+    stringstream ss;
+    ss << stage.text << endl;
+    for (int i = 0; i < (int)stage.answers.size(); i++)
+        ss << i+1 << ": " << stage.answers[i] << endl;
+    
+    sendMessageToAll(ss.str(), gm);
+}
+
 void processMessage(string message, Client &client, GameManager &gm)
 {
-    cout << "Processing message: " << message << endl;
+    cout << "Processing message: " << message;
 
-    if (message.find("name") != string::npos)
-        setClientName(client, message.substr(message.find("name") +  5));
-   
-    else if (message.find("ready") != string::npos)
-        setClientReady(client, gm);
-}
+    for (int i = 0; i < (int)gm.stage.answers.size(); i++)
+    {
+        if (message.find(gm.stage.answers[i]) != string::npos)
+        {
+            cout << client.name << " choice is: " << gm.stage.answers[i];
+            //zaktualizuj liste tych co wybrali
+            //nie pozwalaj zmienić, albo pozwól na zmianę
+            return;
+        }
+    }
 
-void setClientName(Client &client, string name)
-{
-    if (client.name != "")
-        return;
-
-    client.name = name;
-    cout << "Set name of " << client.address << ":" << client.port << " fd: " << client.fd << " to '" << name << "'" << endl; 
-}
-
-void setClientReady(Client &client, GameManager &gm)
-{
-    client.readyToPlay = true;
-    gm.readyPlayersCount++;
-
-    sendMessageToAll(gm.getPlayersInfo(), gm);
-    cout << "Player: " << client.name << " is ready!" << endl; 
-
-    gm.gameStartCheck();
-}
+    writeMessage("Your answer is not correct!\n", client);
+ }
