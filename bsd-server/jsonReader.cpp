@@ -28,21 +28,17 @@ int main() {
   std::ifstream input("../lore/story.txt");
   int entries = 0;
   std::vector<Entry> story;
+  bool readingAnswers = false;
 
   while (std::getline(input, line)) {
+    if (readingAnswers) {
+      std::cout<<line<<std::endl;
+      readingAnswers = false;
+      continue;
+    }
     if (findFor("{", line) != -1) {
       story.push_back(*(new Entry()));
       // std::cout << findFor("{", line) << std::endl;
-    }
-    if (findFor("text", line) != -1) {
-      story[entries].text = line.substr(findFor(":", line)+3);
-      story[entries].text.erase(story[entries].text.end()-2, story[entries].text.end());
-      //std::cout << findFor("text", line) << std::endl;
-    }
-    if (findFor("npc", line) != -1) {
-      story[entries].npc = line.substr(findFor(":", line)+3);
-      story[entries].npc.erase(story[entries].npc.end()-2, story[entries].npc.end());
-      //std::cout << findFor("text", line) << std::endl;
     }
     if (findFor("type", line) != -1) {
       story[entries].type = line.substr(findFor(":", line)+3);
@@ -54,9 +50,22 @@ int main() {
       story[entries].storyID.erase(story[entries].storyID.end()-2, story[entries].type.end());
       //std::cout << findFor("text", line) << std::endl;
     }
+    if (findFor("npc", line) != -1) {
+      story[entries].npc = line.substr(findFor(":", line)+3);
+      story[entries].npc.erase(story[entries].npc.end()-2, story[entries].npc.end());
+      //std::cout << findFor("text", line) << std::endl;
+    }
+    if (findFor("text", line) != -1) {
+      story[entries].text = line.substr(findFor(":", line)+3);
+      story[entries].text.erase(story[entries].text.end()-2, story[entries].text.end());
+      //std::cout << findFor("text", line) << std::endl;
+    }
+    if (findFor("answers", line) != -1) {
+      readingAnswers = true;
+    }
   }
 
-  std::cout<<story[entries].storyID<<std::endl;
+  // std::cout<<story[entries].storyID<<std::endl;
 }
 // "type": "story",
 // "storyID": "1",
