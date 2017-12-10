@@ -1,0 +1,33 @@
+[{
+  "type": "story",
+  "story-id": "1",
+  "npc": "gm",
+  "text": "You are at the tavern with your best friends. What do you intend to do?",
+  "answers": [
+    "Go for an adventure.",
+    "Let's stay here and relax."
+  ]
+},
+{
+  "type": "story",
+  "story-id": "2",
+  "npc": "gm",
+  "text": "As you made you first step towards the door, you felt a cool breeze. Strange... the temperature outside was at least 25 degrees. Do you still want to continue?",
+  "answers": [
+    "Yes.",
+    "No."
+  ]
+},
+{
+  "type": "story",
+  "story-id": "3",
+  "npc": "gm",
+  "text": "As soon as you grabbed the door handle, the room went silent. You turned around curiously and you saw that there was someone new in the tavern. But how could he get into? There is only one door. What do you want to do?",
+  "answers": [
+    "Leave the tavern anyway.",
+    "Greet the new person that just appeared.",
+    "Run away.",
+    "Don't move."
+  ]
+}
+]
