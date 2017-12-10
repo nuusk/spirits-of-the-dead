@@ -1,6 +1,15 @@
 {
     "files.associations": {
         "cstdio": "cpp",
-        "system_error": "cpp"
+        "system_error": "cpp",
+        "thread": "cpp",
+        "iostream": "cpp",
+        "chrono": "cpp",
+        "ostream": "cpp",
+        "array": "cpp",
+        "initializer_list": "cpp",
+        "utility": "cpp",
+        "functional": "cpp",
+        "istream": "cpp"
     }
 }
