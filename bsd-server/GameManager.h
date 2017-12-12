@@ -13,8 +13,7 @@
 
 using namespace std;
 
-//póki co struktura - wszystko publiczne
-struct GameManager 
+class GameManager 
 {
     const int playersToStart = 1;
 
@@ -28,6 +27,7 @@ struct GameManager
     vector<Stage> stages;
     int stagesBeforeTimer;
 
+public:
     GameManager(TcpServer &serv)
     {
         server = serv;
@@ -40,18 +40,57 @@ struct GameManager
         createPipe();
     }
 
+    void update()
+    {
+        if (gameCanBeStarted)
+            startGame();
+        if (gameStarted && canLoadNextStage())
+            launchStage();
+
+        epollWait();
+
+        if (server.event.events == EPOLLIN && server.event.data.fd == server.serverSocket)
+            handleNewClients();
+        else if (server.event.events == EPOLLIN && server.event.data.fd == 0)
+            handleServerRequests();
+        else if (server.event.events == EPOLLIN && server.event.data.fd == PIPE_READ)
+            handleTimers();
+        else
+        {
+            handleClients();
+            handleClientsLobby();
+        }
+    }
+
+
+private:
     void loadStages()
     {
         vector<string> ans = {"Yes", "No" };
-        Stage s = Stage("Example text\nExample text 2\n", ans);
+        vector<int> next = {1, 2};
+        Stage s;
+        s.text = "Example text\nExample text 2\n";
+        s.answers = ans;
+        s.answersStats = vector<int>(ans.size(), 0);
+        s.nextStages = next;
         stages.push_back(s);
 
         vector<string> ans2 = {"Pro", "Noob" };
-        Stage s2 = Stage("Example question\nExample question 2\n", ans2);
+        vector<int> next2 = {2, END_GAME_ID};
+        Stage s2;
+        s2.text = "Example question\nExample question 2\n";
+        s2.answers = ans2;
+        s2.answersStats = vector<int>(ans2.size(), 0);        
+        s2.nextStages = next2;
         stages.push_back(s2);    
 
         vector<string> ans3 = {"Win", "Lose" };
-        Stage s3 = Stage("Example question\nExample question 2\n", ans3);
+        vector<int> next3 = {END_GAME_ID, END_GAME_ID};
+        Stage s3;
+        s3.text = "Example question\nExample question 2\n";
+        s3.answers = ans3;
+        s3.answersStats = vector<int>(ans3.size(), 0);        
+        s3.nextStages = next3;
         stages.push_back(s3);        
     }
 
@@ -190,11 +229,11 @@ struct GameManager
     {
         if (getStage().getAnswersCount() == (int)clients.size())
         {
-            stageNumber++;
+            stageNumber = getStage().getNextStageId();
             stagesBeforeTimer++;
         }
 
-        if (stageNumber == (int)stages.size())
+        if (stageNumber == END_GAME_ID)
             endGame();
     }
 
@@ -272,28 +311,6 @@ struct GameManager
 
 //==========================================================================
     
-    void update()
-    {
-        if (gameCanBeStarted)
-            startGame();
-        if (gameStarted && canLoadNextStage())
-            launchStage();
-
-        epollWait();
-
-        if (server.event.events == EPOLLIN && server.event.data.fd == server.serverSocket)
-            handleNewClients();
-        else if (server.event.events == EPOLLIN && server.event.data.fd == 0)
-            handleServerRequests();
-        else if (server.event.events == EPOLLIN && server.event.data.fd == PIPE_READ)
-            handleTimers();
-        else
-        {
-            handleClients();
-            handleClientsLobby();
-        }
-    }
-
     void handleNewClients()
     {
         addNewClient();
@@ -402,7 +419,6 @@ struct GameManager
         char buf[BUF_SIZE];
         
         readPipe(PIPE_READ, buf);
-        cout << buf << endl;
 
         if (stagesBeforeTimer > 0)
         {
@@ -410,10 +426,11 @@ struct GameManager
             return;
         }
 
+        cout << buf << endl;
         getStage().timesUp(clients.size());
-        stageNumber++;
+        stageNumber = getStage().getNextStageId();
 
-        if (stageNumber == (int)stages.size())
+        if (stageNumber == END_GAME_ID)
             endGame();
     }
 
@@ -425,13 +442,16 @@ struct GameManager
 
         if ((int)clients.size() == 0)
             endGame();
+        else 
+            sendMessageToAll(getClientsInfo());
     }
 
     void removeClientFromLobby(int n)
     {
         cout << "Removing client: " << clientsLobby[n].address << ":" << clientsLobby[n].port << " fd: " << clientsLobby[n].fd << endl;
         close(clientsLobby[n].fd);
-        clientsLobby.erase(clientsLobby.begin() + n);    
+        clientsLobby.erase(clientsLobby.begin() + n);   
+        sendMessageToAllLobby(getClientsInLobbyInfo()); 
     }
 
     bool readMessage(int fd, char* buf)

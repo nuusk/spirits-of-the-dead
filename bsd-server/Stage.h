@@ -7,6 +7,7 @@
 
 #define PIPE_READ 5
 #define PIPE_WRITE 6
+#define END_GAME_ID 32767
 
 using namespace std;
 
@@ -35,16 +36,14 @@ struct Stage
     string text;
     vector<string> answers;
     vector<int> answersStats;
+    vector<int> nextStages;
     int duration;
     bool shown;
 
-    Stage(string txt, vector<string> &a)
+    Stage()
     {
-        text = txt;
-        answers = a;
-        answersStats = vector<int>(a.size(), 0);
         shown = false;
-        duration = 10;
+        duration = 20;
     }
 
     void show()
@@ -69,36 +68,46 @@ struct Stage
 
     string getMostPopularAnswer()
     {
-        int max = 0;
-        string answer = "";
+        return answers[getMostPopularAnswerIndex()];
+    }
 
-        for (int i = 0; i < (int)answersStats.size(); i++)
-        {
-            if (answersStats[i] > max)
-            {
-                max = answersStats[i];
-                answer = answers[i];
-            }
-        }
-
-        return answer;
+    int getNextStageId()
+    {
+        return nextStages[getMostPopularAnswerIndex()];
     }
 
     int getMostPopularAnswerIndex()
     {
+        int max = getMax();
+        int index = handleTie(max);
+
+        return index;
+    }
+
+    int getMax()
+    {
         int max = 0;
-        int index = 0;
 
         for (int i = 0; i < (int)answersStats.size(); i++)
         {
             if (answersStats[i] > max)
-            {
                 max = answersStats[i];
-                index = i;
-            }
         }
 
-        return index;
+        return max;
+    }
+
+    int handleTie(int max)
+    {
+        vector<int> maxes;
+
+        for (int i = 0; i < (int)answersStats.size(); i++)
+        {
+            if (answersStats[i] == max)
+                maxes.push_back(i);
+        }
+
+        return maxes[rand() % maxes.size()];
     }
 
     void timesUp(int playersCount)
@@ -110,8 +119,6 @@ struct Stage
             int k = rand() % answers.size();
             answersStats[k]++;
         }
-
-        cout << "Most popular answer (time's up): " << getMostPopularAnswer() << endl;
     }
 
     int getAnswersCount()
@@ -141,6 +148,9 @@ struct Stage
         ss << "Answers stats:" << endl;
         for (int i = 0; i < (int)answersStats.size(); i++)
             ss << i+1 << ": " << answersStats[i] << endl;
+        ss << "Answers destinations: " << endl;
+        for (int i = 0; i < (int)nextStages.size(); i++)
+            ss << i+1 << " --> " << nextStages[i] << endl;
         ss << "Duration: " << duration << endl;
         ss << "Shown: " << shown << endl;
 
