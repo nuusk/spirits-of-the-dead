@@ -22,6 +22,7 @@ struct GameManager
     bool gameCanBeStarted;
     bool gameStarted;
     vector<Client> clients;
+    vector<Client> clientsLobby;
     int readyPlayersCount;
     int stageNumber;
     vector<Stage> stages;
@@ -45,18 +46,19 @@ struct GameManager
         Stage s = Stage("Example text\nExample text 2\n", ans);
         stages.push_back(s);
 
-        // vector<string> ans2 = {"Pro", "Noob" };
-        // Stage s2 = Stage("Example question\nExample question 2\n", ans2);
-        // stages.push_back(s2);    
+        vector<string> ans2 = {"Pro", "Noob" };
+        Stage s2 = Stage("Example question\nExample question 2\n", ans2);
+        stages.push_back(s2);    
 
-        // vector<string> ans3 = {"Win", "Lose" };
-        // Stage s3 = Stage("Example question\nExample question 2\n", ans3);
-        // stages.push_back(s3);        
+        vector<string> ans3 = {"Win", "Lose" };
+        Stage s3 = Stage("Example question\nExample question 2\n", ans3);
+        stages.push_back(s3);        
     }
 
     void createPipe()
     {
         int fd[2];
+
         int result = pipe(fd);
         if (result == -1)
             error("pipe() error!");
@@ -72,13 +74,21 @@ struct GameManager
         server.addEpollEvent(PIPE_READ);
     }
 
-    string getLobbyPlayersInfo()
+    string getClientsInfo()
     {
         stringstream ss;
         ss << "Players online: " << clients.size() << endl
            << "Players ready: " << readyPlayersCount << endl;
 
         return ss.str(); 
+    }
+
+    string getClientsInLobbyInfo()
+    {
+        stringstream ss;
+        ss << "Players waiting: " << clientsLobby.size() << endl;
+
+        return ss.str();
     }
 
     string getStageAnswersInfo()
@@ -151,7 +161,7 @@ struct GameManager
         client.readyToPlay = true;
         readyPlayersCount++;
 
-        sendMessageToAll(getLobbyPlayersInfo());
+        sendMessageToAll(getClientsInfo());
         cout << "Player: " << client.name << " is ready!" << endl; 
 
         gameStartCheck();
@@ -165,7 +175,7 @@ struct GameManager
         client.readyToPlay = false;
         readyPlayersCount--;
 
-        sendMessageToAll(getLobbyPlayersInfo());
+        sendMessageToAll(getClientsInfo());
         cout << "Player: " << client.name << " is busy now!" << endl;     
     }
 
@@ -193,27 +203,39 @@ struct GameManager
         cout << "The game has finished! Reseting server..." << endl;
         gameStarted = false;
         stageNumber = 0;
+        readyPlayersCount = 0;
         
         letClientsAnswer();
 
         for (Client &c : clients)
-            setClientNotReady(c);
+            c.readyToPlay = false;
         
         for (Stage &s : stages)
             s.reset();
+
+        for (Client &c : clientsLobby)
+            clients.push_back(c);
+
+        clientsLobby.clear();
+
+        sendMessageToAll(getClientsInfo());
     }
 
-    void showClientsInfo()
+    void showClients()
     {
         stringstream ss;
-        ss << "Clients info:" << endl;
+        ss << "Clients in game info:" << endl;
         for (Client c : clients)
             ss << c.toString() << endl;
         
+        ss << "Clients in lobby info:" << endl;
+        for (Client c : clientsLobby)
+            ss << c.toString() << endl;
+
         cout << ss.str();
     }
 
-    void showStagesInfo()
+    void showStages()
     {
         stringstream ss;
         ss << "Stages info:" << endl;
@@ -223,7 +245,7 @@ struct GameManager
         cout << ss.str();
     }
 
-    void showServerInfo()
+    void showServer()
     {
         stringstream ss;
         ss << "Server info:" << endl;
@@ -232,7 +254,7 @@ struct GameManager
         cout << ss.str();
     }
 
-    void showGameManagerInfo()
+    void showGameManager()
     {
         stringstream ss;
         ss << "Game manager:" << endl;
@@ -262,23 +284,24 @@ struct GameManager
         if (server.event.events == EPOLLIN && server.event.data.fd == server.serverSocket)
             handleNewClients();
         else if (server.event.events == EPOLLIN && server.event.data.fd == 0)
-            handleStdIn();
+            handleServerRequests();
         else if (server.event.events == EPOLLIN && server.event.data.fd == PIPE_READ)
-            handlePipe();
+            handleTimers();
         else
+        {
             handleClients();
+            handleClientsLobby();
+        }
     }
 
     void handleNewClients()
     {
-        if (gameStarted) 
-        {
-            rejectClient();
-            return;
-        }
-
         addNewClient();
-        sendMessageToAll(getLobbyPlayersInfo());      
+
+        if (!gameStarted)
+            sendMessageToAll(getClientsInfo());      
+        else 
+            sendMessageToAllLobby(getClientsInLobbyInfo());
     }
 
     void epollWait()
@@ -300,15 +323,30 @@ struct GameManager
         // }
 
         server.addEpollEvent(client.fd);
-        clients.push_back(client);
+        
+        if (!gameStarted)
+        {
+            clients.push_back(client);
+            writeMessage("Hello! It's 'Spirit of the Dead' text game. Enjoy!\n", client);
+        }
+        else
+        {
+            clientsLobby.push_back(client);
+            writeMessage("Hello! It's 'Spirit of the Dead' text game. Enjoy!\nThe game has already started, so you have to wait until the next round.\n", client);            
+        }
 
         cout << "New connection from: " << client.address << ":" << client.port << " fd: " <<  client.fd << endl;
-        writeMessage("Hello! It's 'Spirit of the Dead' text game. Enjoy!\n", client);
     }
 
     bool isAlreadyConnected(Client client)
     {
         for (Client c : clients)
+        {
+            if (c.address == client.address)
+                return true;
+        }
+
+        for (Client c : clientsLobby)
         {
             if (c.address == client.address)
                 return true;
@@ -337,16 +375,7 @@ struct GameManager
         return Client(socket, inet_ntoa(clientInfo.sin_addr), ntohs(clientInfo.sin_port));
     }
 
-    void rejectClient()
-    {
-        Client client = acceptClient();
-        
-        cout << "Client: " << client.address << ":" << client.port << " fd: " << client.fd << " wanted to connect while the game is running. Removing him..." << endl;    
-        writeMessage("The game has already started! Please try again later!\n", client);
-        close(client.fd);
-    }
-
-    void handleStdIn()
+    void handleServerRequests()
     {
         char buf[BUF_SIZE];
 
@@ -359,21 +388,21 @@ struct GameManager
     void processMessageStdIn(string message)
     {
         if (message.find("server") != string::npos)    
-            showServerInfo();
+            showServer();
         else if (message.find("clients") != string::npos)    
-            showClientsInfo();
+            showClients();
         else if (message.find("stages") != string::npos)    
-            showStagesInfo();
+            showStages();
         else if (message.find("manager") != string::npos)    
-            showGameManagerInfo();
+            showGameManager();
     }
 
-    void handlePipe()
+    void handleTimers()
     {
         char buf[BUF_SIZE];
         
         readPipe(PIPE_READ, buf);
-        cout << "BUFEK: " << buf << endl;
+        cout << buf << endl;
 
         if (stagesBeforeTimer > 0)
         {
@@ -383,14 +412,9 @@ struct GameManager
 
         getStage().timesUp(clients.size());
         stageNumber++;
-    }
 
-    void handleClients()
-    {
-        if (!gameStarted)
-            waitForClients();
-        else
-            playGame();
+        if (stageNumber == (int)stages.size())
+            endGame();
     }
 
     void removeClient(int n)
@@ -398,20 +422,18 @@ struct GameManager
         cout << "Removing client: " << clients[n].address << ":" << clients[n].port << " fd: " << clients[n].fd << endl;
         close(clients[n].fd);
         clients.erase(clients.begin() + n);
+
+        if ((int)clients.size() == 0)
+            endGame();
     }
 
-    bool readMessage(Client &client, char* buf)
+    void removeClientFromLobby(int n)
     {
-        memset(buf, 0, BUF_SIZE);
-
-        int msgSize = read(client.fd, buf, BUF_SIZE);
-        if (msgSize < 1)
-            return false;
-
-        return true;
+        cout << "Removing client: " << clientsLobby[n].address << ":" << clientsLobby[n].port << " fd: " << clientsLobby[n].fd << endl;
+        close(clientsLobby[n].fd);
+        clientsLobby.erase(clientsLobby.begin() + n);    
     }
 
-    //ZMIENIĆ ŻEBY BYŁO TYLKO int FD
     bool readMessage(int fd, char* buf)
     {
         memset(buf, 0, BUF_SIZE);
@@ -453,6 +475,15 @@ struct GameManager
         }
     }
 
+    void sendMessageToAllLobby(string message)
+    {
+        for (int i = 0; i < (int)clientsLobby.size(); i++)
+        {
+            if (!writeMessage(message, clientsLobby[i]))
+                removeClientFromLobby(i);
+        }
+    }
+
     void sendMessageToAll(string message, Client &sender)
     {
         for (int i = 0; i < (int)clients.size(); i++)    
@@ -465,7 +496,19 @@ struct GameManager
         }
     }
 
-    void waitForClients()
+    void sendMessageToAllLobby(string message, Client &sender)
+    {
+        for (int i = 0; i < (int)clientsLobby.size(); i++)
+        {
+            if (clientsLobby[i] == sender)
+                continue;
+
+            if (!writeMessage(message, clientsLobby[i]))
+                removeClientFromLobby(i);
+        }
+    }
+
+    void handleClients()
     {
         char buf[BUF_SIZE];
         
@@ -473,21 +516,41 @@ struct GameManager
         {
             if (server.event.events == EPOLLIN && server.event.data.fd == clients[i].fd)
             {
-                if(!readMessage(clients[i], buf))
+                if(!readMessage(clients[i].fd, buf))
                 {
                     removeClient(i);
                     break;
                 }
-                    
-                processMessageOnWaiting(buf, clients[i]);
+
+                if (!gameStarted)       
+                    processMessageBeforeStart(buf, clients[i]);
+                else
+                    processMessageInGame(buf, clients[i]);
             }
         }
     }
 
-    void processMessageOnWaiting(string message, Client &client)
+    void handleClientsLobby()
     {
-        cout << "(LOBBY)Processing message: " << message;
+        char buf[BUF_SIZE];
 
+        for (int i = 0; i < (int)clientsLobby.size(); i++)
+        {
+            if (server.event.events == EPOLLIN && server.event.data.fd == clientsLobby[i].fd)
+            {
+                if (!readMessage(clientsLobby[i].fd, buf))
+                {
+                    removeClientFromLobby(i);
+                    break;
+                }
+
+                processMessageInLobby(buf, clientsLobby[i]);
+            }
+        }
+    }
+
+    void processMessageBeforeStart(string message, Client &client)
+    {
         if (message.find("name") != string::npos)
             setClientName(client, message.substr(message.find("name")+5));
     
@@ -501,29 +564,8 @@ struct GameManager
             sendMessageToAll(client.name + ": " + message.substr(message.find("chat")+5), client);
     }
 
-    void playGame()
+    void processMessageInGame(string message, Client &client)
     {
-        char buf[BUF_SIZE];
-        
-        for (int i = 0; i < (int)clients.size(); i++)
-        {
-            if (server.event.events == EPOLLIN && server.event.data.fd == clients[i].fd)
-            {
-                if(!readMessage(clients[i], buf))
-                {
-                    removeClient(i);
-                    break;
-                }
-
-                processMessage(buf, clients[i]);
-            }
-        }
-    }
-
-    void processMessage(string message, Client &client)
-    {
-        cout << "(GAME)Processing message: " << message;
-
         if (client.answered)
             return;        
 
@@ -541,5 +583,11 @@ struct GameManager
         }
 
         writeMessage("Your answer is not correct!\n", client);
+    }
+
+    void processMessageInLobby(string message, Client &client)
+    {
+        if (message.find("chat") != string::npos)
+            sendMessageToAllLobby(client.name + ": " + message.substr(message.find("chat")+5), client);
     }
 };
