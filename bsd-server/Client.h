@@ -40,4 +40,17 @@ struct Client
 
         return value;
     }
+
+    string toString()
+    {
+        stringstream ss;
+        ss << "Address: " << address << endl;
+        ss << "Port: " << port << endl;
+        ss << "Fd: " << fd << endl;
+        ss << "Name: " << name << endl;
+        ss << "Ready: " << readyToPlay << endl;
+        ss << "Answered: " << answered << endl;
+
+        return ss.str();
+    }
 };

@@ -2,12 +2,6 @@
 #include <vector>
 #include <sstream>
 #include <cstdlib>
-
-#include <iostream>       // std::cout
-#include <iomanip>        // std::put_time
-#include <thread>         // std::this_thread::sleep_until
-#include <chrono>         // std::chrono::system_clock
-#include <ctime>
 #include <pthread.h>
 #include <unistd.h>
 
@@ -25,13 +19,14 @@ void error(string errorMessage)
 void *timer(void* duration)
 {
     int d = *((int *)duration);
+    
     sleep(d);
-        
+    
     string msg = "Time's up!";
     int count = write(PIPE_WRITE, msg.c_str(), msg.size());
     if (count == -1)
-        error("write() error!");   
-    
+        error("write() error!");  
+
     pthread_exit(NULL);
 }
 
@@ -42,7 +37,6 @@ struct Stage
     vector<int> answersStats;
     int duration;
     bool shown;
-    bool completed;
 
     Stage(string txt, vector<string> &a)
     {
@@ -50,8 +44,7 @@ struct Stage
         answers = a;
         answersStats = vector<int>(a.size(), 0);
         shown = false;
-        completed = false;
-        duration = 3;
+        duration = 10;
     }
 
     void show()
@@ -118,9 +111,7 @@ struct Stage
             answersStats[k]++;
         }
 
-        //getMostPopularAnswerIndex();
-        
-        completed = true;
+        cout << "Most popular answer (time's up): " << getMostPopularAnswer() << endl;
     }
 
     int getAnswersCount()
@@ -130,5 +121,29 @@ struct Stage
             sum += answersStats[i];
 
         return sum;
+    }
+
+    void reset()
+    {
+        shown = false;
+        
+        for (int i = 0; i < (int)answersStats.size(); i++)
+            answersStats[i] = 0;
+    }
+
+    string toString()
+    {
+        stringstream ss;
+        ss << "Text: " << endl;
+        ss << "Answers: " << endl;
+        for (int i = 0; i < (int)answers.size(); i++)
+            ss << i+1 << ": " << answers[i] << endl;
+        ss << "Answers stats:" << endl;
+        for (int i = 0; i < (int)answersStats.size(); i++)
+            ss << i+1 << ": " << answersStats[i] << endl;
+        ss << "Duration: " << duration << endl;
+        ss << "Shown: " << shown << endl;
+
+        return ss.str();
     }
 };

@@ -29,6 +29,7 @@ public:
     {
         createEpollFd();
         addEpollEvent(serverSocket);
+        addEpollEvent(0);
     }
 
     void addEpollEvent(int sock)
@@ -46,9 +47,22 @@ public:
         close(serverSocket);
         close(epollFd);
     }
+ 
+    string toString()
+    {
+        stringstream ss;
+        ss << "Socket: " << serverSocket << endl;
+        ss << "Address:" << endl;
+        ss << "Address.family: " << address.sin_family << endl;
+        ss << "Address.address: " << address.sin_addr.s_addr << endl;
+        ss << "Address.port: " << address.sin_port << endl;
+        ss << "Epoll fd: " << epollFd << endl;
+
+        return ss.str();
+    }
+
 
 private:
-
     void createSocket()
     {
         serverSocket = socket(AF_INET, SOCK_STREAM, 0);

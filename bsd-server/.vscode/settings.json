@@ -10,6 +10,8 @@
         "initializer_list": "cpp",
         "utility": "cpp",
         "functional": "cpp",
-        "istream": "cpp"
+        "istream": "cpp",
+        "iosfwd": "cpp",
+        "*.tcc": "cpp"
     }
 }
