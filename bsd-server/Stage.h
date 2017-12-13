@@ -39,10 +39,14 @@ struct Stage
     vector<int> nextStages;
     int duration;
     bool shown;
+    bool bossStage;
+    int bossHp;
 
     Stage()
     {
         shown = false;
+        bossStage = false;
+        bossHp = 0;
         duration = 20;
     }
 
@@ -153,6 +157,8 @@ struct Stage
             ss << i+1 << " --> " << nextStages[i] << endl;
         ss << "Duration: " << duration << endl;
         ss << "Shown: " << shown << endl;
+        ss << "Boss round: " << bossStage << endl;
+        ss << "Boss hp: " << bossHp << endl;
 
         return ss.str();
     }

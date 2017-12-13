@@ -38,6 +38,8 @@ public:
         stagesBeforeTimer = 0;
         loadStages();
         createPipe();
+        showHelp();
+        cout << endl << "<<<<<----- server is running ----->>>>>" << endl;
     }
 
     void update()
@@ -64,6 +66,14 @@ public:
 
 
 private:
+    void showHelp()
+    {
+        cout << "server => shows server info" << endl;
+        cout << "manager => shows game manager info" << endl;
+        cout << "clients => shows clients info" << endl;
+        cout << "stages => shows stages info" << endl;
+    }
+
     void loadStages()
     {
         vector<string> ans = {"Yes", "No" };
@@ -116,10 +126,9 @@ private:
     string getClientsInfo()
     {
         stringstream ss;
-        ss << "Players online: " << clients.size() << endl
-           << "Players ready: " << readyPlayersCount << endl;
-
-        return ss.str(); 
+        ss << "{\"type\":\"playersInfo\", \"online\":\"" << clients.size() << "\", \"ready\":\"" << readyPlayersCount << "\"}";
+        
+        return ss.str();
     }
 
     string getClientsInLobbyInfo()
@@ -309,8 +318,11 @@ private:
     }
 
 
-//==========================================================================
-    
+//==========================================================================================================
+//==========================================================================================================
+//==========================================================================================================
+
+
     void handleNewClients()
     {
         addNewClient();
@@ -342,15 +354,9 @@ private:
         server.addEpollEvent(client.fd);
         
         if (!gameStarted)
-        {
             clients.push_back(client);
-            writeMessage("Hello! It's 'Spirit of the Dead' text game. Enjoy!\n", client);
-        }
         else
-        {
             clientsLobby.push_back(client);
-            writeMessage("Hello! It's 'Spirit of the Dead' text game. Enjoy!\nThe game has already started, so you have to wait until the next round.\n", client);            
-        }
 
         cout << "New connection from: " << client.address << ":" << client.port << " fd: " <<  client.fd << endl;
     }
@@ -510,8 +516,11 @@ private:
         {
             if (clients[i] == sender)
                 continue;
-
-            if (!writeMessage(message, clients[i]))
+            
+            stringstream ss;
+            ss << "{ \"type\" : \"chat\", \"text\" : \"" << message << "\" }";
+            cout << ss.str() << endl;
+            if (!writeMessage(ss.str(), clients[i]))
                 removeClient(i);
         }
     }
@@ -523,7 +532,10 @@ private:
             if (clientsLobby[i] == sender)
                 continue;
 
-            if (!writeMessage(message, clientsLobby[i]))
+            stringstream ss;
+            ss << "{ \"type\" : \"chat\", \"text\" : \"" << message << "\" }";
+
+            if (!writeMessage(ss.str(), clientsLobby[i]))
                 removeClientFromLobby(i);
         }
     }
@@ -571,16 +583,16 @@ private:
 
     void processMessageBeforeStart(string message, Client &client)
     {
-        if (message.find("name") != string::npos)
+        if (message.substr(0, 5) == "name ")
             setClientName(client, message.substr(message.find("name")+5));
     
-        else if (message.find("notready") != string::npos)
+        else if (message == "notready")
             setClientNotReady(client);
         
-        else if (message.find("ready") != string::npos)
+        else if (message == "ready")
             setClientReady(client);
 
-        else if (message.find("chat") != string::npos)
+        else if (message.find("chat ") != string::npos)
             sendMessageToAll(client.name + ": " + message.substr(message.find("chat")+5), client);
     }
 

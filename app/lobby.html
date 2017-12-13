@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Lobby</title>
+  </head>
+  <body>
+    
+    <div>
+        Set name: <br>
+        <input type="text" id="nameBox"> <br>
+        <input type="button" value="Set" id="nameButton" />
+    </div>
+
+    <div>
+        Ready state: <br>
+        <input type="button" value="Ready" id="readyButton" />
+    </div> 
+
+    <div>
+        <label id="onlinePlayersLabel">Online: ??</label> <br>
+        <label id="readyPlayersLabel">Ready: ??</label>
+    </div>
+
+    <div>
+        <div>
+            Chat: <br>
+            <textarea id="chatBox" style="width: 400px; height: 200px;">
+            </textarea>
+        </div>
+        
+        <div>
+            Message: <br>
+            <input type="text" id="messageBox" />
+            <input type="button" id="sendButton" value="Send" />
+        </div>
+    </div>
+
+    <script>
+        require('./lobby.js');
+    </script>
+  </body>
+</html>
