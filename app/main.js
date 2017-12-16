@@ -4,7 +4,7 @@ const path = require('path');
 const {app, BrowserWindow, ipcMain} = electron;
 const net = require('net');
 
-const ADDRESS = '192.168.8.107';
+const ADDRESS = '192.168.8.105';
 const PORT = 1252;
 const WINDOW_HEIGHT = 600;
 const WINDOW_WIDTH = 800;
@@ -66,8 +66,7 @@ app.on('ready', () => {
 
 //waiting for player to select the character
 ipcMain.on('character:select', (e, player) => {
-  //after he selects the character, close the selection menu and run the actual game
-  _window = new BrowserWindow({width: WINDOW_WIDTH, height: WINDOW_HEIGHT});
+  //after he selects the character, close the selection menu and load the actual game
   _window.loadURL(url.format({
     pathname: path.join(__dirname, 'game.html'),
     protocol: 'file:',

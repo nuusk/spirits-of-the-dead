@@ -25,9 +25,9 @@ main #terminal {
   height: 60vh;
   background-color: #181d2d;
   text-align: center; }
-  main #terminal input {
+  main #terminal textarea {
     background-color: #292e3e;
     height: 95%;
     width: 95%;
     color: #efefef;
-    font-size: 2.5em; }
+    font-size: 1.5em; }
