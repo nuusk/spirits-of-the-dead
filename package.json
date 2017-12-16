@@ -4,7 +4,8 @@
   "description": "",
   "main": "./app/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "sass": "node-sass -rw app/sass -o app/css"
   },
   "repository": {
     "type": "git",
