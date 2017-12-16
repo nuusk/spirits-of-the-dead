@@ -85,6 +85,12 @@ ipcMain.on('character:select', (e, player) => {
   });
 });
 
+ipcMain.on('terminal:command', (e, command) => {
+  console.log(e);
+  console.log(command);
+  client.write(JSON.stringify(command));
+});
+
 
 //========================ipcMain================================
 /*
