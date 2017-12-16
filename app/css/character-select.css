@@ -1,0 +1,25 @@
+@import url("https://fonts.googleapis.com/css?family=VT323");
+html, body {
+  margin: 0;
+  padding: 0; }
+
+body {
+  background-color: #181d2d; }
+
+* {
+  font-family: 'VT323', monospace; }
+
+main #character-menu {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; }
+  main #character-menu div {
+    width: 220px;
+    height: 220px;
+    margin: 20px;
+    background-color: #d8ac84;
+    border: 3px solid #efefef;
+    transition: 0.3s; }
+    main #character-menu div:hover {
+      background-color: #947966;
+      cursor: pointer; }

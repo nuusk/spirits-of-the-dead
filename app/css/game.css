@@ -1,0 +1,33 @@
+@import url("https://fonts.googleapis.com/css?family=VT323");
+html, body {
+  margin: 0;
+  padding: 0; }
+
+body {
+  background-color: #181d2d; }
+
+* {
+  font-family: 'VT323', monospace; }
+
+main {
+  cursor: default; }
+  main #top-menu {
+    width: 100%;
+    height: 40vh;
+    color: #947966;
+    font-size: 4em;
+    text-align: center;
+    transition: 0.3s; }
+    main #top-menu:hover {
+      color: #d8ac84; }
+
+main #terminal {
+  height: 60vh;
+  background-color: #181d2d;
+  text-align: center; }
+  main #terminal input {
+    background-color: #292e3e;
+    height: 95%;
+    width: 95%;
+    color: #efefef;
+    font-size: 2.5em; }
