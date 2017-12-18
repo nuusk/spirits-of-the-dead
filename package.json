@@ -9,7 +9,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pietersweter/spirits-of-the-dead.git"
+    "url": "git+https://github.com/pietersweter/spirits-of-the-dead.git",
+    "bsd": "g++ -o bsd-server/server bsd-server/server.cpp -pthread"
   },
   "author": "wookie + poe",
   "license": "ISC",
