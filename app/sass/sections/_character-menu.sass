@@ -1,15 +1,25 @@
 main
   #character-menu
-    display: flex
-    flex-wrap: wrap
-    justify-content: center
+    @extend %center
+    margin: auto
+    width: 760px
+    height: 560px
+    padding: 20px 20px 0 20px
+    display: grid
+    grid-template-columns: 1fr 1fr 1fr
     div
-      width: 220px
       height: 220px
-      margin: 20px
+      width: 220px
+      // margin: 40px
       background-color: $accent-light
       border: 3px solid $white
       transition: $transition-short
+      justify-self: center
       &:hover
         background-color: $accent
         cursor: pointer
+    span
+      @extend %center
+      font-size: 4em
+      letter-spacing: 10px
+      color: $white
