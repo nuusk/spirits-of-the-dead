@@ -5,8 +5,7 @@ A mystery of mysteries!
 
 ## Project Configuration
 
-Install modules needed
-* Compile server
+### Install modules needed
 ```
 npm install
 ```
