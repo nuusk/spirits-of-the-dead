@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "sass": "node-sass -rw app/sass -o app/css",
-    "bsd": "g++ -o bsd-server/server bsd-server/server.cpp -pthread"
+    "bsd": "g++ -Wall -std=c++11 -o bsd-server/server bsd-server/server.cpp -pthread"
   },
   "repository": {
     "type": "git",
