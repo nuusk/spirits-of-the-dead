@@ -1,9 +1,18 @@
 # Spirits of the Dead
 
-...How it hangs upon the trees, 
+...How it hangs upon the trees,
 A mystery of mysteries!
 
-## Server Configuration
+## Project Configuration
+
+Install modules needed
+* Compile server
+```
+npm install
+```
+
+
+### Server Configuration
 
 * Compile server
 ```
@@ -20,7 +29,7 @@ npm run bsd
 ip a
 ```
 
-## Client Configuration
+### Client Configuration
 
 * Change the ip address and port in resources/sockets.json to match the server address.
 
