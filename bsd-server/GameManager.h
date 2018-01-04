@@ -126,7 +126,7 @@ private:
     string getClientsInfo()
     {
         stringstream ss;
-        ss << "{\"type\":\"playersInfo\", \"online\":\"" << clients.size() << "\", \"ready\":\"" << readyPlayersCount << "\"}";
+        ss << "{\"type\":\"playersLobbyInfo\", \"online\":\"" << clients.size() << "\", \"ready\":\"" << readyPlayersCount << "\"}";
         
         return ss.str();
     }
@@ -134,7 +134,16 @@ private:
     string getClientsInLobbyInfo()
     {
         stringstream ss;
-        ss << "Players waiting: " << clientsLobby.size() << endl;
+        ss << "{\"type\":\"playersLobbyInfo\", \"inGame\":\"" << clients.size() << "\", \"waiting\":\"" << clientsLobby.size() << "\"}";
+
+        return ss.str();
+    }
+
+    string getGameStartedInfo()
+    {
+        stringstream ss;
+        ss << "{\"type\" : \"gameStartedInfo\", \"gameStarted\" : \"" << (gameStarted ? "true" : "false") << "\"}";
+        cout << ss.str() << endl;
 
         return ss.str();
     }
@@ -231,7 +240,8 @@ private:
     {
         gameStarted = true;
         gameCanBeStarted = false;
-        sendMessageToAll("The game has started!\nGood luck\n");
+                
+        sendMessageToAll("{ \"type\" : \"gameStart\"}");
     }
 
     void checkIfAllAnswered()
@@ -266,6 +276,7 @@ private:
 
         clientsLobby.clear();
 
+        sendMessageToAll("{ \"type\" : \"gameEnd\"}");
         sendMessageToAll(getClientsInfo());
     }
 
@@ -518,8 +529,8 @@ private:
                 continue;
             
             stringstream ss;
-            ss << "{ \"type\" : \"chat\", \"text\" : \"" << message << "\" }";
-            cout << ss.str() << endl;
+            ss << "{ \"type\" : \"chat\", \"message\" : \"" << message << "\" }";
+
             if (!writeMessage(ss.str(), clients[i]))
                 removeClient(i);
         }
@@ -533,7 +544,7 @@ private:
                 continue;
 
             stringstream ss;
-            ss << "{ \"type\" : \"chat\", \"text\" : \"" << message << "\" }";
+            ss << "{ \"type\" : \"chat\", \"message\" : \"" << message << "\" }";
 
             if (!writeMessage(ss.str(), clientsLobby[i]))
                 removeClientFromLobby(i);
@@ -592,6 +603,12 @@ private:
         else if (message == "ready")
             setClientReady(client);
 
+        else if (message == "playersLobbyInfo")
+            writeMessage(getClientsInfo(), client);
+
+        else if (message == "getGameStarted")
+            writeMessage(getGameStartedInfo(), client);
+
         else if (message.find("chat ") != string::npos)
             sendMessageToAll(client.name + ": " + message.substr(message.find("chat")+5), client);
     }
@@ -619,7 +636,13 @@ private:
 
     void processMessageInLobby(string message, Client &client)
     {
-        if (message.find("chat") != string::npos)
+        if (message == "getGameStarted")
+            writeMessage(getGameStartedInfo(), client);
+
+        else if (message == "playersLobbyInfo")
+            writeMessage(getClientsInLobbyInfo(), client);
+
+        else if (message.find("chat") != string::npos)
             sendMessageToAllLobby(client.name + ": " + message.substr(message.find("chat")+5), client);
     }
 };

@@ -1,0 +1,13 @@
+{
+  "files.associations": {
+    "array": "cpp",
+    "chrono": "cpp",
+    "functional": "cpp",
+    "ratio": "cpp",
+    "tuple": "cpp",
+    "type_traits": "cpp",
+    "utility": "cpp",
+    "typeinfo": "cpp",
+    "system_error": "cpp"
+  }
+}
