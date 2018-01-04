@@ -220,7 +220,6 @@ private:
         readyPlayersCount++;
 
         sendMessageToAll(getClientsInfo());
-        cout << "Player: " << client.name << " is ready!" << endl; 
 
         gameStartCheck();
     }
@@ -234,7 +233,6 @@ private:
         readyPlayersCount--;
 
         sendMessageToAll(getClientsInfo());
-        cout << "Player: " << client.name << " is busy now!" << endl;     
     }
 
     void startGame()

@@ -130,7 +130,7 @@ struct Stage
 
     void timesUp(int playersCount)
     {
-        int n = getAnswersCount() - playersCount;
+        int n = playersCount - getAnswersCount();
 
         for (int i = 0; i < n; i++)
         {
