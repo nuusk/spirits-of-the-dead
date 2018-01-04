@@ -63,16 +63,27 @@ struct Stage
     string getStageText()
     {
         stringstream ss;
-        ss << text << endl;
+        ss << "{\"type\" : \"stage\", ";
+        ss << "\"text\" : \"" << text << "\", ";
+
+        ss << "\"answers\" : [";
         for (int i = 0; i < (int)answers.size(); i++)
-            ss << i+1 << ": " << answers[i] << endl;
+        {
+            ss << '\"' << answers[i] << '\"';
+
+            if (i + 1 < (int)answers.size())
+                ss << ',';
+        }
+        ss << "]}";
 
         return ss.str();
     }
 
     string getMostPopularAnswer()
     {
-        return answers[getMostPopularAnswerIndex()];
+        int index = getMostPopularAnswerIndex();
+
+        return index == -1 ? "---" : answers[index];
     }
 
     int getNextStageId()
@@ -83,6 +94,9 @@ struct Stage
     int getMostPopularAnswerIndex()
     {
         int max = getMax();
+        if (max == 0) 
+            return -1;
+
         int index = handleTie(max);
 
         return index;

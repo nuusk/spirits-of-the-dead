@@ -55,6 +55,7 @@ function splitAndProcessMessage(input)
 
 function processMessage(data) {
   data = JSON.parse(data.toString('utf8'));
+
   _window.webContents.send(data.type, data);
 }
 

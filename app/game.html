@@ -17,8 +17,13 @@
         <input type="text" placeholer="Your name" id="name"/> <br>
         <input type="button" value="Set name" id="nameButton"/><br>
       </div>
+      <div id="answersDiv" style="display: none">
+        <label id="answerNumber">Answers: ??</label> <br>
+        <label id="mostPopularAnswer"></label> <br>
+      </div>
       <section id="terminal">
-        <textarea rows="4" cols="50" id="command-line"></textarea>
+        <textarea rows="4" cols="50" id="wall"></textarea><br>
+        <input type="text" id="command-line"/>
       </section>
     </main>
     <script type="text/javascript" src="js/game.js"></script>

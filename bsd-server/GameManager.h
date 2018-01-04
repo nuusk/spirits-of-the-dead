@@ -79,7 +79,7 @@ private:
         vector<string> ans = {"Yes", "No" };
         vector<int> next = {1, 2};
         Stage s;
-        s.text = "Example text\nExample text 2\n";
+        s.text = "Example textExample text 2";
         s.answers = ans;
         s.answersStats = vector<int>(ans.size(), 0);
         s.nextStages = next;
@@ -88,7 +88,7 @@ private:
         vector<string> ans2 = {"Pro", "Noob" };
         vector<int> next2 = {2, END_GAME_ID};
         Stage s2;
-        s2.text = "Example question\nExample question 2\n";
+        s2.text = "Example questionExample question 2";
         s2.answers = ans2;
         s2.answersStats = vector<int>(ans2.size(), 0);        
         s2.nextStages = next2;
@@ -97,7 +97,7 @@ private:
         vector<string> ans3 = {"Win", "Lose" };
         vector<int> next3 = {END_GAME_ID, END_GAME_ID};
         Stage s3;
-        s3.text = "Example question\nExample question 2\n";
+        s3.text = "Example questionExample question 2";
         s3.answers = ans3;
         s3.answersStats = vector<int>(ans3.size(), 0);        
         s3.nextStages = next3;
@@ -143,7 +143,6 @@ private:
     {
         stringstream ss;
         ss << "{\"type\" : \"gameStartedInfo\", \"gameStarted\" : \"" << (gameStarted ? "true" : "false") << "\"}";
-        cout << ss.str() << endl;
 
         return ss.str();
     }
@@ -151,8 +150,9 @@ private:
     string getStageAnswersInfo()
     {
         stringstream ss;
-        ss << "Answers: " << getPlayersWhoAnsweredNumber() << "/" << clients.size() << endl;
-        ss << "Most popular answer: " << getStage().getMostPopularAnswer() << endl;
+        ss << "{\"type\" : \"answersInfo\",";
+        ss << "\"answerNumber\" : \"" << getPlayersWhoAnsweredNumber() << "/" << clients.size() << "\",";
+        ss << "\"mostPopularAnswer\" : \"" << getStage().getMostPopularAnswer() << "\"}";
         
         return ss.str();
     }
@@ -196,6 +196,7 @@ private:
         getStage().show();
         sendMessageToAll(getStage().getStageText());
         letClientsAnswer();
+        sendMessageToAll(getStageAnswersInfo());
     }
 
     void letClientsAnswer()
@@ -241,7 +242,7 @@ private:
         gameStarted = true;
         gameCanBeStarted = false;
                 
-        sendMessageToAll("{ \"type\" : \"gameStart\"}");
+        sendMessageToAll("{\"type\" : \"gameStart\"}");
     }
 
     void checkIfAllAnswered()
@@ -615,6 +616,7 @@ private:
 
     void processMessageInGame(string message, Client &client)
     {
+        cout << message << endl;
         if (client.answered)
             return;        
 

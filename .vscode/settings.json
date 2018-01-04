@@ -8,6 +8,8 @@
     "type_traits": "cpp",
     "utility": "cpp",
     "typeinfo": "cpp",
-    "system_error": "cpp"
+    "system_error": "cpp",
+    "sstream": "cpp",
+    "iostream": "cpp"
   }
 }
