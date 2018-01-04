@@ -1,16 +1,21 @@
 main
   #character-menu
+    background-image: url('../img/texture.jpeg')
     @extend %center
     margin: auto
-    width: 760px
-    height: 560px
-    padding: 20px 20px 0 20px
+    width: 100%
+    height: 100%
+    // padding: 20px 20px 0 20px
     display: grid
-    grid-template-columns: 1fr 1fr 1fr
+    grid-template-areas: 'left center right'
+    transition: 2s
+    &.selected
+      grid-template-columns: 1fr 3fr 1fr
     div
-      height: 220px
-      width: 220px
-      // margin: 40px
+      top: 0
+      left: 0
+      height: $character-box-size
+      width: $character-box-size
       background-color: $accent-light
       border: 3px solid $white
       transition: $transition-short
