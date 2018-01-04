@@ -109,42 +109,17 @@ ipcMain.on('terminal:command', (e, command) => {
   client.write(JSON.stringify(command));
 });
 
-
-//========================ipcMain================================
-/*
-//Menu
-ipcMain.on('startGame', () => {
-  window.loadURL(url.format({
-    pathname: path.join(__dirname, 'lobby.html'),
-    protocol: 'file:',
-    slashes: true
-  }));
-
-  client.connect(port, address, () => {
-    console.log('Connected to the server: ' + address + ':' + port);
-  });
-});
-
-ipcMain.on('exitApp', () => {
-  app.exit();
-});
-//Menu
-
-
-//Lobby
-ipcMain.on('setName', (event, arg) => {
-  client.write('name ' + arg);
-})
-
-ipcMain.on('setReady', (event, arg) => {
-  if (arg)
+ipcMain.on('setReadyState', (e, readyState) => {
+  if (readyState)
     client.write('ready');
   else
     client.write('notready');
 });
 
-ipcMain.on('chat', (event, arg) => {
-  client.write('chat ' + arg);
+ipcMain.on('setName', (e, name) => {
+  client.write('name ' + name);
 });
-//Lobby
-*/
+
+ipcMain.on('chat', (e, msg) => {
+  client.write('chat ' + msg);
+});
