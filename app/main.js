@@ -25,17 +25,40 @@ client.on('error', (err) => {
 });
 
 client.on('data', (data) => {
-  // processMessage(data);
-  console.log('Server: ' + data);
+  splitAndProcessMessage(data.toString('utf8'));
 });
+
+function splitAndProcessMessage(input) 
+{
+  let bracketCount = 0;
+  let start = 0;
+  
+  for (let i = 0; i < input.length; i++)
+  {
+    if (input.charAt(i) == '{')
+      bracketCount++;
+    
+    else if (input.charAt(i) == '}')
+    {
+      bracketCount--; 
+      
+      if (bracketCount == 0)
+      {
+        let singleObject = input.substr(start, i - start + 1);
+        console.log('Server: ' + singleObject);
+        processMessage(singleObject);
+        start = i + 1;
+      } 
+    }
+  }
+}
 
 function processMessage(data) {
   data = data.toString('utf8');
-  console.log(data);
   data = JSON.parse(data);
 
   if (data.type == 'playersInfo' || data.type == 'chat')
-    window.webContents.send(data.type, data);
+    _window.webContents.send(data.type, data);
 }
 
 
@@ -54,6 +77,11 @@ app.on('ready', () => {
     protocol: 'file:',
     slashes: true
   }));
+
+  //when a character is selected, we can connect the client to the server
+  client.connect(serverAddress.server.port, serverAddress.server.address, () => {
+    console.log('Connected to the server ' + serverAddress.server.address + ':' + serverAddress.server.port + '...');
+  });
 
   _window.on('closed', () => {
     app.quit();
@@ -74,16 +102,10 @@ ipcMain.on('character:select', (e, player) => {
     app.quit();
     _window = null;
   });
-
-  //when a character is selected, we can connect the client to the server
-  client.connect(serverAddress.address, serverAddress.port, () => {
-  	console.log('Connected to the server ' + serverAddress.address + ':' + serverAddress.port + '...');
-  });
 });
 
 ipcMain.on('terminal:command', (e, command) => {
-  console.log(e);
-  console.log(command);
+  console.log(JSON.stringify(command));
   client.write(JSON.stringify(command));
 });
 
