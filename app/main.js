@@ -4,6 +4,7 @@ const path = require('path');
 const {app, BrowserWindow, ipcMain} = electron;
 const net = require('net');
 const serverAddress = require('../resources/sockets.json');
+console.log(serverAddress);
 
 const WINDOW_HEIGHT = 700;
 const WINDOW_WIDTH = 900;
@@ -55,6 +56,10 @@ app.on('ready', () => {
     slashes: true
   }));
 
+  // client.connect('192.168.8.104', '1252', () => {
+  //   console.log('Connected to the server ' + serverAddress.address + ':' + serverAddress.port + '...');
+  // });
+
   _window.on('closed', () => {
     app.quit();
     _window = null;
@@ -76,7 +81,7 @@ ipcMain.on('character:select', (e, player) => {
   });
 
   //when a character is selected, we can connect the client to the server
-  client.connect(serverAddress.address, serverAddress.port, () => {
+  client.connect(serverAddress.server.port, serverAddress.server.address, () => {
   	console.log('Connected to the server ' + serverAddress.address + ':' + serverAddress.port + '...');
   });
 });
