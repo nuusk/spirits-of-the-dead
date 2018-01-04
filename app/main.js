@@ -4,6 +4,7 @@ const path = require('path');
 const {app, BrowserWindow, ipcMain} = electron;
 const net = require('net');
 const serverAddress = require('../resources/sockets.json');
+console.log(serverAddress);
 
 const WINDOW_HEIGHT = 700;
 const WINDOW_WIDTH = 900;
@@ -28,27 +29,27 @@ client.on('data', (data) => {
   splitAndProcessMessage(data.toString('utf8'));
 });
 
-function splitAndProcessMessage(input) 
+function splitAndProcessMessage(input)
 {
   let bracketCount = 0;
   let start = 0;
-  
+
   for (let i = 0; i < input.length; i++)
   {
     if (input.charAt(i) == '{')
       bracketCount++;
-    
+
     else if (input.charAt(i) == '}')
     {
-      bracketCount--; 
-      
+      bracketCount--;
+
       if (bracketCount == 0)
       {
         let singleObject = input.substr(start, i - start + 1);
         console.log('Server: ' + singleObject);
         processMessage(singleObject);
         start = i + 1;
-      } 
+      }
     }
   }
 }
@@ -78,9 +79,8 @@ app.on('ready', () => {
     slashes: true
   }));
 
-  //when a character is selected, we can connect the client to the server
   client.connect(serverAddress.server.port, serverAddress.server.address, () => {
-    console.log('Connected to the server ' + serverAddress.server.address + ':' + serverAddress.server.port + '...');
+    console.log('Connected to the server ' + serverAddress.address + ':' + serverAddress.port + '...');
   });
 
   _window.on('closed', () => {
