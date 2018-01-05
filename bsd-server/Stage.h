@@ -7,7 +7,7 @@
 
 #define PIPE_READ 5
 #define PIPE_WRITE 6
-#define END_GAME_ID 32767
+#define END_GAME_ID -1
 
 using namespace std;
 
@@ -159,7 +159,7 @@ struct Stage
     string toString()
     {
         stringstream ss;
-        ss << "Text: " << endl;
+        ss << "Text: " << text << endl;
         ss << "Answers: " << endl;
         for (int i = 0; i < (int)answers.size(); i++)
             ss << i+1 << ": " << answers[i] << endl;

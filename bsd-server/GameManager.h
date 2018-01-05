@@ -2,12 +2,13 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <fstream>
 #include <cstring>
 #include <arpa/inet.h>
 
-#include "Stage.h"
 #include "Client.h"
 #include "TcpServer.h"
+#include "StoryReader.h"
 
 #define BUF_SIZE 65536
 
@@ -36,7 +37,7 @@ public:
         readyPlayersCount = 0;
         stageNumber = 0;
         stagesBeforeTimer = 0;
-        loadStages();
+        stages = loadStory();
         createPipe();
         showHelp();
         cout << endl << "<<<<<----- server is running ----->>>>>" << endl;
@@ -73,7 +74,7 @@ private:
         cout << "clients => shows clients info" << endl;
         cout << "stages => shows stages info" << endl;
     }
-
+    
     void loadStages()
     {
         vector<string> ans = {"Yes", "No" };
