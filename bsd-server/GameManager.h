@@ -74,7 +74,7 @@ private:
         cout << "clients => shows clients info" << endl;
         cout << "stages => shows stages info" << endl;
     }
-    
+
     void loadStages()
     {
         vector<string> ans = {"Yes", "No" };
@@ -263,7 +263,7 @@ private:
 
     void checkIfAllAnswered()
     {
-        if (getStage().getAnswersCount() == (int)clients.size())
+        if (getPlayersWhoAnsweredNumber() == (int)clients.size())
         {
             stageNumber = getStage().getNextStageId();
             stagesBeforeTimer++;
@@ -477,7 +477,15 @@ private:
         if ((int)clients.size() == 0)
             endGame();
         else 
+        {
             sendMessageToAll(getClientsInfo());
+
+            if (gameStarted) 
+            {
+                sendMessageToAll(getStageAnswersInfo());
+                checkIfAllAnswered();
+            }
+        }
     }
 
     void removeClientFromLobby(int n)
