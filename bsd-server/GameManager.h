@@ -235,6 +235,23 @@ private:
         sendMessageToAll(getClientsInfo());
     }
 
+    void tryToAnswer(string message, Client &client)
+    {
+        if (isdigit(message[0]))
+        {
+            int ans = atoi(message.c_str()) - 1;
+            
+            if (ans >= 0 && ans < (int)getStage().answers.size())
+            {
+                cout << client.name << " choice is: " << getStage().answers[ans] << endl;
+                client.answered = true;
+                getStage().answersStats[ans]++;
+                sendMessageToAll(getStageAnswersInfo());
+                checkIfAllAnswered();
+            }
+        }
+    }
+
     void startGame()
     {
         gameStarted = true;
@@ -614,24 +631,10 @@ private:
 
     void processMessageInGame(string message, Client &client)
     {
-        cout << message << endl;
         if (client.answered)
             return;        
-
-        for (int i = 0; i < (int)getStage().answers.size(); i++)
-        {
-            if (message.find(getStage().answers[i]) != string::npos)
-            {
-                cout << client.name << " choice is: " << getStage().answers[i] << endl;
-                client.answered = true;
-                getStage().answersStats[i]++;
-                sendMessageToAll(getStageAnswersInfo());
-                checkIfAllAnswered();
-                return;
-            }
-        }
-
-        writeMessage("Your answer is not correct!\n", client);
+        
+        tryToAnswer(message, client);
     }
 
     void processMessageInLobby(string message, Client &client)

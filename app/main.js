@@ -71,10 +71,6 @@ app.on('ready', () => {
     slashes: true
   }));
 
-  client.connect(serverAddress.server.port, serverAddress.server.address, () => {
-    console.log('Connected to the server ' + serverAddress.server.address + ':' + serverAddress.server.port + '...');
-  });
-
   _window.on('closed', () => {
     app.quit();
     _window = null;
@@ -91,14 +87,22 @@ ipcMain.on('character:select', (e, player) => {
     slashes: true
   }));
 
+  client.connect(serverAddress.server.port, serverAddress.server.address, () => {
+    console.log('Connected to the server ' + serverAddress.server.address + ':' + serverAddress.server.port + '...');
+  });
+
   _window.on('closed', () => {
     app.quit();
     _window = null;
   });
 });
 
+ipcMain.on('chat', (e, message) => {
+  client.write('chat ' + message);
+});
+
 ipcMain.on('terminal:command', (e, command) => {
-  client.write(JSON.stringify(command));
+  client.write(command);
 });
 
 ipcMain.on('setReadyState', (e, readyState) => {

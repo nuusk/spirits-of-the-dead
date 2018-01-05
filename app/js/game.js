@@ -16,6 +16,7 @@ const answersDiv = document.getElementById('answersDiv');
 
 let ready = false;
 let gameStarted = false;
+let chatting = true;
 
 
 window.onload = () => {
@@ -28,7 +29,11 @@ window.onload = () => {
 commandLine.addEventListener('keydown', (e)=>{
   if (e.keyCode == 13) 
   {
-    ipcRenderer.send('terminal:command', commandLine.value);
+    if (chatting)
+      ipcRenderer.send('chat', commandLine.value);
+    else
+      ipcRenderer.send('terminal:command', commandLine.value);
+  
     commandLine.value = '';
   }
 });
@@ -79,12 +84,14 @@ ipcRenderer.on('chat', (e, data) => {
 
 ipcRenderer.on('gameStart', () => {
   gameStarted = true;
+  chatting = false;
   lobbyDiv.style.display = 'none';
   answersDiv.style.display = 'block';
 });
 
 ipcRenderer.on('gameEnd', () => {
   gameStarted = false;
+  chatting = true;
   answersDiv.style.display = 'none';  
   lobbyDiv.style.display = 'block';
   readyButton.style.display = 'block';  
