@@ -50,7 +50,10 @@ readyButton.addEventListener('click', () => {
 
 nameButton.addEventListener('click', () => {
   if (name.value.trim() != '')
+  {
     ipcRenderer.send('setName', name.value);
+    name.value = "";
+  }
 });
 
 
@@ -74,8 +77,8 @@ ipcRenderer.on('playersLobbyInfo', (e, data) => {
 });
 
 ipcRenderer.on('answersInfo', (e, data) => {
-  answerNumber.innerHTML = data.answerNumber;
-  mostPopularAnswer.innerHTML = data.mostPopularAnswer;
+  answerNumber.innerHTML = `Answers:  ${data.answerNumber}`;
+  mostPopularAnswer.innerHTML = `Most popular: ${data.mostPopularAnswer}`;
 });
 
 ipcRenderer.on('chat', (e, data) => {
@@ -101,6 +104,13 @@ ipcRenderer.on('gameEnd', () => {
 });
 
 ipcRenderer.on('stage', (e, data) => {
+  commandLine.value = "";
+  commandLine.disabled = true;
+  
+  setTimeout(() => {
+    commandLine.disabled = false;
+  }, 500);
+
   wall.value += data.text + '\n';
   
   for (let i = 0; i < data.answers.length; i++)
