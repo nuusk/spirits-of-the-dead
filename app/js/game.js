@@ -53,6 +53,8 @@ nameButton.addEventListener('click', () => {
   {
     ipcRenderer.send('setName', name.value);
     name.value = "";
+    name.disabled = true;
+    nameButton.disabled = true;
   }
 });
 
@@ -90,6 +92,8 @@ ipcRenderer.on('gameStart', () => {
   chatting = false;
   lobbyDiv.style.display = 'none';
   answersDiv.style.display = 'block';
+  wall.value = "--------- GAME STARTED ---------\n";
+  wall.value += "-----------> ENJOY! <-----------\n"
 });
 
 ipcRenderer.on('gameEnd', () => {
@@ -98,9 +102,17 @@ ipcRenderer.on('gameEnd', () => {
   answersDiv.style.display = 'none';  
   lobbyDiv.style.display = 'block';
   readyButton.style.display = 'block';  
-
+  
   ready = false;
   readyButton.value = 'Ready';
+
+  window.scrollTop = window.scrollHeight;
+
+  wall.value += '--------- THE END ---------';
+  wall.value += '\n--------- THE END ---------';
+  wall.value += '\n--------- THE END ---------\n\n\n\n\n'; 
+  wall.scrollTop = wall.scrollHeight;
+  wall.focus(); 
 });
 
 ipcRenderer.on('stage', (e, data) => {
@@ -109,12 +121,14 @@ ipcRenderer.on('stage', (e, data) => {
   
   setTimeout(() => {
     commandLine.disabled = false;
+    commandLine.focus();
   }, 500);
 
-  wall.value += data.text + '\n';
+  wall.value += '\n' + data.text + '\n';
   
   for (let i = 0; i < data.answers.length; i++)
-    wall.value += `${i+1}. ${data.answers[i]}`;
+    wall.value += `${i+1}. ${data.answers[i]}\n`;
   
   wall.value += '\n';
+  wall.scrollTop = wall.scrollHeight;
 });

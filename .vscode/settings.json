@@ -34,6 +34,7 @@
     "mutex": "cpp",
     "new": "cpp",
     "stdexcept": "cpp",
-    "streambuf": "cpp"
+    "streambuf": "cpp",
+    "thread": "cpp"
   }
 }

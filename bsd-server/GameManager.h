@@ -244,7 +244,6 @@ private:
             
             if (ans >= 0 && ans < (int)getStage().answers.size())
             {
-                cout << client.name << " choice is: " << getStage().answers[ans] << endl;
                 client.answered = true;
                 getStage().answersStats[ans]++;
                 sendMessageToAll(getStageAnswersInfo());
@@ -368,8 +367,6 @@ private:
             error("epoll_wait() error!");
     }
 
-    //póki co można się łączyć z tego samego IP kilka razy
-    //zrobić możliwość reconnectowania z tego samego ip
     void addNewClient()
     {
         Client client = acceptClient();
@@ -409,7 +406,6 @@ private:
     void removeCheater(Client client)
     {
         cout << "Client: " << client.address << ":" << client.port << " fd: " << client.fd << " is trying to cheat! Removing him..." << endl;
-        writeMessage("Bye bye, cheater!\n", client);
         close(client.fd);
     }
 
