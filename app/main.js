@@ -7,6 +7,7 @@ const serverAddress = require('../resources/sockets.json');
 
 const WINDOW_HEIGHT = 700;
 const WINDOW_WIDTH = 900;
+const END_OF_MSG = '10101010101010101010101010101010';
 
 
 //~~~~~~~~~~~~~~~~~~~~~ Socket Connection ~~~~~~~~~~~~~~~~~~~~~~~
@@ -59,6 +60,7 @@ function processMessage(data) {
   _window.webContents.send(data.type, data);
 }
 
+
 //~~~~~~~~~~~~~~~~~~~~~ App Rendering ~~~~~~~~~~~~~~~~~~~~~~~
 let _window;
 
@@ -98,28 +100,37 @@ ipcMain.on('character:select', (e, player) => {
 });
 
 ipcMain.on('chat', (e, message) => {
-  client.write('chat ' + message);
+  sendMessage('chat ' + message);
 });
 
 ipcMain.on('terminal:command', (e, command) => {
-  client.write(command);
+  sendMessage(command);
 });
 
 ipcMain.on('setReadyState', (e, readyState) => {
   if (readyState)
-    client.write('ready');
+    sendMessage('ready');
   else
-    client.write('notready');
+    sendMessage('notready');
 });
 
 ipcMain.on('setName', (e, name) => {
-  client.write('name ' + name);
+  sendMessage('name ' + name);
 });
 
 ipcMain.on('getPlayersLobbyInfo', () => {
-  client.write('playersLobbyInfo');
+  sendMessage('playersLobbyInfo');
 });
 
 ipcMain.on('getGameStarted', (e) => {
-  client.write('getGameStarted');
+  sendMessage('getGameStarted');
 });
+
+
+
+function sendMessage(message)
+{
+  message += END_OF_MSG;
+
+  client.write(message);  
+}

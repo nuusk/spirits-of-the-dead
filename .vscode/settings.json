@@ -35,6 +35,8 @@
     "new": "cpp",
     "stdexcept": "cpp",
     "streambuf": "cpp",
-    "thread": "cpp"
+    "thread": "cpp",
+    "iomanip": "cpp",
+    "string": "cpp"
   }
 }

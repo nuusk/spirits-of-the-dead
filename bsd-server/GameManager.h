@@ -11,6 +11,8 @@
 #include "StoryReader.h"
 
 #define BUF_SIZE 65536
+#define END_OF_MSG "10101010101010101010101010101010"
+#define END_OF_MSG_SIZE 32
 
 using namespace std;
 
@@ -19,6 +21,7 @@ class GameManager
     const int playersToStart = 1;
 
     TcpServer server;
+    int pipeFd[2];
     bool gameCanBeStarted;
     bool gameStarted;
     vector<Client> clients;
@@ -37,8 +40,8 @@ public:
         readyPlayersCount = 0;
         stageNumber = 0;
         stagesBeforeTimer = 0;
-        stages = loadStory();
         createPipe();
+        stages = loadStory(pipeFd[1]);
         showHelp();
         cout << endl << "<<<<<----- server is running ----->>>>>" << endl;
     }
@@ -52,11 +55,11 @@ public:
 
         epollWait();
 
-        if (server.event.events == EPOLLIN && server.event.data.fd == server.serverSocket)
+        if (server.getEvent().events == EPOLLIN && server.getEvent().data.fd == server.getSocket())
             handleNewClients();
-        else if (server.event.events == EPOLLIN && server.event.data.fd == 0)
+        else if (server.getEvent().events == EPOLLIN && server.getEvent().data.fd == 0)
             handleServerRequests();
-        else if (server.event.events == EPOLLIN && server.event.data.fd == PIPE_READ)
+        else if (server.getEvent().events == EPOLLIN && server.getEvent().data.fd == pipeFd[0])
             handleTimers();
         else
         {
@@ -75,53 +78,13 @@ private:
         cout << "stages => shows stages info" << endl;
     }
 
-    void loadStages()
-    {
-        vector<string> ans = {"Yes", "No" };
-        vector<int> next = {1, 2};
-        Stage s;
-        s.text = "Example textExample text 2";
-        s.answers = ans;
-        s.answersStats = vector<int>(ans.size(), 0);
-        s.nextStages = next;
-        stages.push_back(s);
-
-        vector<string> ans2 = {"Pro", "Noob" };
-        vector<int> next2 = {2, END_GAME_ID};
-        Stage s2;
-        s2.text = "Example questionExample question 2";
-        s2.answers = ans2;
-        s2.answersStats = vector<int>(ans2.size(), 0);        
-        s2.nextStages = next2;
-        stages.push_back(s2);    
-
-        vector<string> ans3 = {"Win", "Lose" };
-        vector<int> next3 = {END_GAME_ID, END_GAME_ID};
-        Stage s3;
-        s3.text = "Example questionExample question 2";
-        s3.answers = ans3;
-        s3.answersStats = vector<int>(ans3.size(), 0);        
-        s3.nextStages = next3;
-        stages.push_back(s3);        
-    }
-
     void createPipe()
     {
-        int fd[2];
-
-        int result = pipe(fd);
+        int result = pipe(pipeFd);
         if (result == -1)
             error("pipe() error!");
 
-        result = dup2(fd[0], PIPE_READ);
-        if (result == -1)
-            error("dup2() error!");
-
-        result = dup2(fd[1], PIPE_WRITE);
-        if (result == -1)
-            error("dup2() error!");
-
-        server.addEpollEvent(PIPE_READ);
+        server.addEpollEvent(pipeFd[0]);
     }
 
     string getClientsInfo()
@@ -362,7 +325,8 @@ private:
 
     void epollWait()
     {
-        int result = epoll_wait(server.epollFd, &server.event, 1, -1);
+        int result = server.epollWait();
+
         if (result == -1)
             error("epoll_wait() error!");
     }
@@ -386,6 +350,7 @@ private:
         cout << "New connection from: " << client.address << ":" << client.port << " fd: " <<  client.fd << endl;
     }
 
+    //PÓKI CO MARTWY KOD
     bool isAlreadyConnected(Client client)
     {
         for (Client c : clients)
@@ -402,7 +367,8 @@ private:
 
         return false;
     }
-
+    
+    //PÓKI CO MARTWY KOD
     void removeCheater(Client client)
     {
         cout << "Client: " << client.address << ":" << client.port << " fd: " << client.fd << " is trying to cheat! Removing him..." << endl;
@@ -414,12 +380,16 @@ private:
         int socket;
         sockaddr_in clientInfo;
         socklen_t clientInfoSize = sizeof(clientInfo);
+        char address[INET_ADDRSTRLEN];
 
-        socket = accept(server.serverSocket, (sockaddr*)&clientInfo, &clientInfoSize);
+        socket = server.acceptClient((sockaddr*)&clientInfo, &clientInfoSize);
         if (socket == -1)
             error("accept() error!");
 
-        return Client(socket, inet_ntoa(clientInfo.sin_addr), ntohs(clientInfo.sin_port));
+        inet_ntop(AF_INET, &(clientInfo.sin_addr), address, INET_ADDRSTRLEN);
+        cout << "TO JEST TO: " << address << endl;
+
+        return Client(socket, address, ntohs(clientInfo.sin_port));
     }
 
     void handleServerRequests()
@@ -434,13 +404,16 @@ private:
 
     void processMessageStdIn(string message)
     {
-        if (message.find("server") != string::npos)    
+        if (message.find("\n") != string::npos)
+            message.erase(message.find("\n", 1));
+
+        if (message == "server")    
             showServer();
-        else if (message.find("clients") != string::npos)    
+        else if (message == "clients")    
             showClients();
-        else if (message.find("stages") != string::npos)    
+        else if (message == "stages")    
             showStages();
-        else if (message.find("manager") != string::npos)    
+        else if (message == "manager")    
             showGameManager();
     }
 
@@ -448,7 +421,7 @@ private:
     {
         char buf[BUF_SIZE];
         
-        readPipe(PIPE_READ, buf);
+        readPipe(pipeFd[0], buf);
 
         if (stagesBeforeTimer > 0)
         {
@@ -578,7 +551,7 @@ private:
         
         for (int i = 0; i < (int)clients.size(); i++)
         {
-            if (server.event.events == EPOLLIN && server.event.data.fd == clients[i].fd)
+            if (server.getEvent().events == EPOLLIN && server.getEvent().data.fd == clients[i].fd)
             {
                 if(!readMessage(clients[i].fd, buf))
                 {
@@ -600,7 +573,7 @@ private:
 
         for (int i = 0; i < (int)clientsLobby.size(); i++)
         {
-            if (server.event.events == EPOLLIN && server.event.data.fd == clientsLobby[i].fd)
+            if (server.getEvent().events == EPOLLIN && server.getEvent().data.fd == clientsLobby[i].fd)
             {
                 if (!readMessage(clientsLobby[i].fd, buf))
                 {
@@ -615,42 +588,68 @@ private:
 
     void processMessageBeforeStart(string message, Client &client)
     {
-        if (message.substr(0, 5) == "name ")
-            setClientName(client, message.substr(message.find("name")+5));
-    
-        else if (message == "notready")
-            setClientNotReady(client);
+        while (message != "")
+        {
+            if (message.find(END_OF_MSG) == string::npos)
+                break;
+            
+            string singleMsg = message.substr(0, message.find(END_OF_MSG));
+
+            if (singleMsg.substr(0, 5) == "name ")
+                setClientName(client, singleMsg.substr(singleMsg.find("name")+5));
         
-        else if (message == "ready")
-            setClientReady(client);
+            else if (singleMsg == "notready")
+                setClientNotReady(client);
+            
+            else if (singleMsg == "ready")
+                setClientReady(client);
 
-        else if (message == "playersLobbyInfo")
-            writeMessage(getClientsInfo(), client);
+            else if (singleMsg == "playersLobbyInfo")
+                writeMessage(getClientsInfo(), client);
 
-        else if (message == "getGameStarted")
-            writeMessage(getGameStartedInfo(), client);
+            else if (singleMsg == "getGameStarted")
+                writeMessage(getGameStartedInfo(), client);
 
-        else if (message.find("chat ") != string::npos)
-            sendMessageToAll(client.name + ": " + message.substr(message.find("chat")+5), client);
+            else if (singleMsg.find("chat ") != string::npos)
+                sendMessageToAll(client.name + ": " + singleMsg.substr(singleMsg.find("chat")+5), client);
+
+            message = message.substr(singleMsg.length() + END_OF_MSG_SIZE);
+        }
     }
 
     void processMessageInGame(string message, Client &client)
     {
         if (client.answered)
             return;        
-        
-        tryToAnswer(message, client);
+     
+        while (message != "")
+        {
+            if (message.find(END_OF_MSG) == string::npos)
+                break;
+            
+            string singleMsg = message.substr(0, message.find(END_OF_MSG));
+
+            tryToAnswer(singleMsg, client);
+        }
     }
 
     void processMessageInLobby(string message, Client &client)
     {
-        if (message == "getGameStarted")
-            writeMessage(getGameStartedInfo(), client);
+        while (message != "")
+        {
+            if (message.find(END_OF_MSG) == string::npos)
+                break;
+            
+            string singleMsg = message.substr(0, message.find(END_OF_MSG));
 
-        else if (message == "playersLobbyInfo")
-            writeMessage(getClientsInLobbyInfo(), client);
+            if (message == "getGameStarted")
+                writeMessage(getGameStartedInfo(), client);
 
-        else if (message.find("chat") != string::npos)
-            sendMessageToAllLobby(client.name + ": " + message.substr(message.find("chat")+5), client);
+            else if (message == "playersLobbyInfo")
+                writeMessage(getClientsInLobbyInfo(), client);
+
+            else if (message.find("chat") != string::npos)
+                sendMessageToAllLobby(client.name + ": " + message.substr(message.find("chat")+5), client);
+        }
     }
 };

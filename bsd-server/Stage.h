@@ -5,11 +5,24 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#define PIPE_READ 5
-#define PIPE_WRITE 6
 #define END_GAME_ID -1
+#define DURATION 60
 
 using namespace std;
+
+
+struct TimerData
+{
+    int duration; 
+    int fd;
+
+    TimerData(int dur, int pipe)
+    {
+        duration = dur;
+        fd = pipe;
+    }
+};
+
 
 void error(string errorMessage) 
 {
@@ -17,19 +30,21 @@ void error(string errorMessage)
     exit(0);
 }
 
-void *timer(void* duration)
+void *timer(void* pipeWrite)
 {
-    int d = *((int *)duration);
+    int fd = *((int *)pipeWrite); 
+    cout << fd << endl;
     
-    sleep(d);
+    sleep(DURATION);
     
     string msg = "Time's up!";
-    int count = write(PIPE_WRITE, msg.c_str(), msg.size());
+    int count = write(fd, msg.c_str(), msg.size());
     if (count == -1)
         error("write() error!");  
 
     pthread_exit(NULL);
 }
+
 
 struct Stage
 {
@@ -37,12 +52,12 @@ struct Stage
     vector<string> answers;
     vector<int> answersStats;
     vector<int> nextStages;
-    int duration;
     bool shown;
+    int readPipe;
 
-    Stage()
+    Stage(int fd)
     {
-        duration = 60;
+        readPipe = fd;
     }
 
     void show()
@@ -50,7 +65,7 @@ struct Stage
         shown = true;
 
         pthread_t thread;
-        int result = pthread_create(&thread, NULL, timer, &duration);
+        int result = pthread_create(&thread, NULL, timer, &readPipe);
         if (result == -1)
             error("pthread_create() error!");
     }
@@ -164,7 +179,6 @@ struct Stage
         ss << "Answers destinations: " << endl;
         for (int i = 0; i < (int)nextStages.size(); i++)
             ss << i+1 << " --> " << nextStages[i] << endl;
-        ss << "Duration: " << duration << endl;
         ss << "Shown: " << shown << endl;
 
         return ss.str();

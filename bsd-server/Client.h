@@ -1,11 +1,11 @@
-#include <string>
+#include <random>
 
 using namespace std;
 
 struct Client
 {
     int fd;
-    char* address;
+    string address;
     int port;
     string name;
     bool readyToPlay;
@@ -33,12 +33,14 @@ struct Client
 
     string getRandomName()
     {
-        string value = "";
+        string name = "";
+        random_device gen; 
+        uniform_int_distribution<char> character('a', 'z'); 
+        
+        for (int i = 0; i < 10; i++) 
+            name += character(gen);
 
-        for (int i = 0; i < 10; i++)
-            value += rand() % 26 + 97; 
-
-        return value;
+        return name;
     }
 
     string toString()

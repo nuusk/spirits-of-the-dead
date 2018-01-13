@@ -10,11 +10,21 @@ using namespace std;
 
 class TcpServer
 {
-public:
     int serverSocket;
     sockaddr_in address;
     int epollFd;
     epoll_event event;
+
+public:
+    int getSocket()
+    {
+        return serverSocket;
+    }
+
+    epoll_event getEvent()
+    {
+        return event;
+    }
 
     void prepareSocket()
     {
@@ -40,6 +50,20 @@ public:
         int result = epoll_ctl(epollFd, EPOLL_CTL_ADD, sock, &event);
         if (result == -1)
             error("epoll_ctl() error!");
+    }
+
+    int acceptClient(sockaddr* clientInfo, socklen_t* clientInfoSize)
+    {
+        int result = accept(serverSocket, clientInfo, clientInfoSize);
+
+        return result;
+    }
+
+    int epollWait()
+    {
+        int result = epoll_wait(epollFd, &event, 1, -1);
+
+        return result;
     }
 
     void closeServer()

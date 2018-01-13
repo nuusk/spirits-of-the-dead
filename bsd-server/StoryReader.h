@@ -16,7 +16,7 @@ int searchFor(string word, string line)
   return -1;
 }
 
-vector<Stage> loadStory() 
+vector<Stage> loadStory(int pipeWrite) 
 {
     vector<Stage> story;
     int entries = 0;
@@ -59,7 +59,7 @@ vector<Stage> loadStory()
         }
 
         if (searchFor("{", line) != -1) 
-            story.push_back(*(new Stage()));
+            story.push_back(*(new Stage(pipeWrite)));
 
         if (searchFor("}", line) != -1)
         {
