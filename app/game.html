@@ -8,21 +8,33 @@
   <body>
     <main>
       <section id="top-menu">
-        Choose your character
+        <div class="avatar">
+          <img src="img/alice-avatar.png" alt="">
+        </div>
+        <div class="lobby">
+          <div class="name-wrapper">
+            <input id="username" type="text" placeholder="your name" value="" id="name"/>
+            <button id="set-name" type="button">set name</button>
+          </div>
+          <div class="info-wrapper">
+            <span class="info">Server info</span>
+            <span id="players-online">Online: ??</span>
+            <span id="players-ready">Ready: ??</span>
+          </div>
+          <div class="ready-wrapper">
+            <button id="set-ready" type="button">ready</button>
+          </div>
+        </div>
+        <div class="answers">
+          <span class="info">Party</span>
+          <span id="answer-number">Answers: ??</span>
+          <span id="most-popular-answer"></span>
+        </div>
       </section>
-      <div id="lobbyDiv">
-        <label id="playersOnline">Online: ??</label> <br>
-        <label id="playersReady">Ready: ??</label> <br>
-        <input type="button" value="Ready" id="readyButton"/><br>
-        <input type="text" placeholer="Your name" id="name"/> <br>
-        <input type="button" value="Set name" id="nameButton"/><br>
-      </div>
-      <div id="answersDiv" style="display: none">
-        <label id="answerNumber">Answers: ??</label> <br>
-        <label id="mostPopularAnswer"></label> <br>
-      </div>
-      <section id="terminal">
+      <section id="story">
         <textarea rows="4" cols="50" id="wall" readonly></textarea><br>
+      </section>
+      <section id="terminal">
         <input type="text" id="command-line"/>
       </section>
     </main>

@@ -1,11 +1,61 @@
 main
   cursor: default
   #top-menu
-    width: 100%
-    height: 40vh
-    color: $black
-    font-size: 4em
-    text-align: center
-    transition: $transition-short
-    &:hover
-      color: $accent-light
+    display: grid
+    grid-template-columns: 1fr 1fr 1fr
+    grid-auto-rows: 300px
+    div
+      // border: 1px solid $black
+      padding: 1em
+      img
+        max-height: 100%
+        max-width: 100%
+    .lobby
+      display: grid
+      grid-template-rows: 1fr 1fr 1fr 1fr
+      .name-wrapper
+        text-align: center
+        #username
+          @extend %input-text
+          text-align: left
+          border: none
+          outline: none
+          background-color: rgba(0,0,0,0)
+          border-bottom: 2px solid $pencil
+          width: 100%
+        button
+          @extend %paper-button
+      .info-wrapper
+        padding: 10px
+        margin: 0
+        border: 2px solid $pencil
+        border-radius: 10px
+        span
+          display: block
+          @extend %story-text
+          &.info
+            text-align: center
+            color: $pencil
+      .ready-wrapper
+        text-align: center
+        button
+          @extend %paper-button
+    .answers
+      margin: 30px 35px 10px 20px
+      border: 2px solid $pencil
+      border-radius: 10px
+      .info
+        margin-bottom: 20px
+      span
+        display: block
+        @extend %story-text
+        &.info
+          text-align: center
+          color: $pencil
+
+
+
+    button
+      @extend %story-text
+      border: none
+      background-color: rgba(0,0,0,0)

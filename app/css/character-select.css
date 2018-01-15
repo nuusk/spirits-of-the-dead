@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css?family=Courgette|Dancing+Script|Great+Vibes");
+@import url("https://fonts.googleapis.com/css?family=Amatic+SC|Patrick+Hand+SC|Sofia|Great+Vibes");
 main #character-menu, main #character-menu span {
   position: absolute;
   top: 50%;
@@ -10,10 +10,19 @@ html, body {
   padding: 0; }
 
 body {
-  background-image: url("../img/texture.jpg"); }
+  background-image: url("../img/texture.jpg");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center; }
+
+main {
+  width: 900px;
+  height: 700px;
+  display: grid;
+  grid-template-rows: 1fr 1fr 1fr; }
 
 * {
-  font-family: 'Great Vibes', cursive; }
+  font-family: 'Patrick Hand SC', cursive; }
 
 main #character-menu {
   margin: auto;

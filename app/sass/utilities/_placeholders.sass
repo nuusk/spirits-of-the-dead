@@ -3,3 +3,34 @@
   top: 50%
   left: 50%
   transform: translate(-50%, -50%)
+
+
+%story-text
+  font-family: 'Amatic SC', cursive
+  font-size: 1.5em
+  color: $black
+
+%input-text
+  font-family: 'Sofia', cursive
+  font-size: 1.5em
+  color: $pencil
+  &::placeholder
+    color: $pencil
+
+%paper-button
+  font-family: 'Amatic SC', cursive
+  color: $pencil
+  width: 80px
+  border: 2px solid $pencil
+  border-radius: 13px
+  transform: rotate(-3deg)
+  transition: .3s
+  &:hover
+    cursor: pointer
+    background-color: $pencil
+    color: $white
+    transform: rotate(-7deg) translate(2px, 3px)
+  &:active
+    background-color: $black
+    color: $black
+    border: 2px solid $black
