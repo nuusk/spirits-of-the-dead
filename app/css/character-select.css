@@ -1,10 +1,4 @@
 @import url("https://fonts.googleapis.com/css?family=Amatic+SC|Patrick+Hand+SC|Sofia|Great+Vibes");
-main #character-menu, main #character-menu span {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%); }
-
 html, body {
   margin: 0;
   padding: 0; }
@@ -15,38 +9,51 @@ body {
   background-repeat: no-repeat;
   background-position: center center; }
 
-main {
-  width: 900px;
-  height: 700px;
-  display: grid;
-  grid-template-rows: 1fr 1fr 1fr; }
-
 * {
   font-family: 'Patrick Hand SC', cursive; }
 
-main #character-menu {
-  margin: auto;
-  width: 760px;
-  height: 560px;
-  padding: 20px 20px 0 20px;
-  display: grid;
-  grid-template-areas: 'left center right';
-  transition: 2s; }
-  main #character-menu.selected {
-    grid-template-columns: 1fr 3fr 1fr; }
-  main #character-menu div {
-    top: 0;
-    left: 0;
-    height: 220px;
-    width: 220px;
-    background-color: #d8ac84;
-    border: 3px solid #efefef;
-    transition: 0.3s;
-    justify-self: center; }
-    main #character-menu div:hover {
-      background-color: #947966;
-      cursor: pointer; }
-  main #character-menu span {
-    font-size: 4em;
-    letter-spacing: 10px;
-    color: #efefef; }
+main {
+  width: 900px;
+  height: 700px; }
+  main #character-menu {
+    position: relative;
+    top: 10%;
+    transition: 2s;
+    transform: translate(-30px, 0px); }
+    main #character-menu div {
+      position: absolute;
+      height: 500px;
+      width: 300px;
+      transition: 0.3s; }
+    main #character-menu #oliver {
+      background-image: url("../img/oliver-sketch.png");
+      background-size: cover;
+      left: 5%; }
+      main #character-menu #oliver:hover {
+        cursor: pointer;
+        background-image: url("../img/oliver-color.png");
+        transform: translate(0, 10px); }
+    main #character-menu #alice {
+      background-image: url("../img/alice-sketch.png");
+      background-size: cover;
+      left: 25%; }
+      main #character-menu #alice:hover {
+        cursor: pointer;
+        background-image: url("../img/alice-color.png");
+        transform: translate(0, 10px); }
+    main #character-menu #christopher {
+      background-image: url("../img/christopher-sketch.png");
+      background-size: cover;
+      left: 50%; }
+      main #character-menu #christopher:hover {
+        cursor: pointer;
+        background-image: url("../img/christopher-color.png");
+        transform: translate(0, 10px); }
+    main #character-menu #natalie {
+      background-image: url("../img/natalie-sketch.png");
+      background-size: cover;
+      left: 72%; }
+      main #character-menu #natalie:hover {
+        cursor: pointer;
+        background-image: url("../img/natalie-color.png");
+        transform: translate(0, 10px); }

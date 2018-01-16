@@ -1,29 +1,47 @@
 main
+  width: 900px
+  height: 700px
   #character-menu
-    @extend %center
-    margin: auto
-    width: 760px
-    height: 560px
-    padding: 20px 20px 0 20px
-    display: grid
-    grid-template-areas: 'left center right'
+    position: relative
+    top: 10%
     transition: 2s
-    &.selected
-      grid-template-columns: 1fr 3fr 1fr
+    transform: translate(-30px, 0px)
     div
-      top: 0
-      left: 0
-      height: $character-box-size
-      width: $character-box-size
-      background-color: $accent-light
-      border: 3px solid $white
+      position: absolute
+      height: 500px
+      width: 300px
+      // background-color: $accent-light
+      // border: 3px solid $black
       transition: $transition-short
-      justify-self: center
+    #oliver
+      background-image: url('../img/oliver-sketch.png')
+      background-size: cover
+      left: 5%
       &:hover
-        background-color: $accent
         cursor: pointer
-    span
-      @extend %center
-      font-size: 4em
-      letter-spacing: 10px
-      color: $white
+        background-image: url('../img/oliver-color.png')
+        transform: translate(0, 10px)
+    #alice
+      background-image: url('../img/alice-sketch.png')
+      background-size: cover
+      left: 25%
+      &:hover
+        cursor: pointer
+        background-image: url('../img/alice-color.png')
+        transform: translate(0, 10px)
+    #christopher
+      background-image: url('../img/christopher-sketch.png')
+      background-size: cover
+      left: 50%
+      &:hover
+        cursor: pointer
+        background-image: url('../img/christopher-color.png')
+        transform: translate(0, 10px)
+    #natalie
+      background-image: url('../img/natalie-sketch.png')
+      background-size: cover
+      left: 72%
+      &:hover
+        cursor: pointer
+        background-image: url('../img/natalie-color.png')
+        transform: translate(0, 10px)
