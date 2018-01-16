@@ -23,6 +23,9 @@ let chatting = true;
 window.onload = () => {
   ipcRenderer.send('getGameStarted');
   ipcRenderer.send('getPlayersLobbyInfo');
+  console.log(global.location.search.slice(8));
+  document.getElementById(`${global.location.search.slice(8)}-avatar`).style.display = 'block';
+  console.log(document.getElementById(`${global.location.search.slice(8)}-avatar`));
 };
 
 

@@ -29,34 +29,32 @@ client.on('data', (data) => {
   splitAndProcessMessage(data.toString('utf8'));
 });
 
-function splitAndProcessMessage(input) 
-{
+function splitAndProcessMessage(input) {
   let bracketCount = 0;
   let start = 0;
-  
+
   for (let i = 0; i < input.length; i++)
   {
     if (input.charAt(i) == '{')
       bracketCount++;
-    
+
     else if (input.charAt(i) == '}')
     {
-      bracketCount--; 
-      
+      bracketCount--;
+
       if (bracketCount == 0)
       {
         let singleObject = input.substr(start, i - start + 1);
         console.log('Server: ' + singleObject);
         processMessage(singleObject);
         start = i + 1;
-      } 
+      }
     }
   }
 }
 
 function processMessage(data) {
   data = JSON.parse(data.toString('utf8'));
-
   _window.webContents.send(data.type, data);
 }
 
@@ -83,11 +81,7 @@ app.on('ready', () => {
 
 //~~~~~~~~~~~~~~~~~~~~~ ipcMain ~~~~~~~~~~~~~~~~~~~~~~~
 ipcMain.on('character:select', (e, player) => {
-  _window.loadURL(url.format({
-    pathname: path.join(__dirname, 'game.html'),
-    protocol: 'file:',
-    slashes: true
-  }));
+  _window.loadURL(`file://${__dirname}/game.html?avatar=${player}`);
 
   client.connect(serverAddress.server.port, serverAddress.server.address, () => {
     console.log('Connected to the server ' + serverAddress.server.address + ':' + serverAddress.server.port + '...');
@@ -128,9 +122,7 @@ ipcMain.on('getGameStarted', (e) => {
 
 
 
-function sendMessage(message)
-{
+function sendMessage(message) {
   message += END_OF_MSG;
-
-  client.write(message);  
+  client.write(message);
 }
