@@ -1,4 +1,9 @@
 @import url("https://fonts.googleapis.com/css?family=Amatic+SC|Patrick+Hand+SC|Sofia|Great+Vibes");
+main span {
+  font-family: 'Amatic SC', cursive;
+  font-size: 1.5em;
+  color: #2b2a27; }
+
 html, body {
   margin: 0;
   padding: 0; }
@@ -7,7 +12,9 @@ body {
   background-image: url("../img/texture.jpg");
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: center center; }
+  background-position: center center;
+  overflow-x: hidden;
+  overflow-y: hidden; }
 
 * {
   font-family: 'Patrick Hand SC', cursive; }
@@ -15,11 +22,19 @@ body {
 main {
   width: 900px;
   height: 700px; }
+  main span {
+    color: #555555;
+    font-size: 4em;
+    position: absolute;
+    top: 7%;
+    left: 50%;
+    transform: translate(-50%, -50%); }
   main #character-menu {
     position: relative;
-    top: 10%;
+    top: 14%;
     transition: 2s;
-    transform: translate(-30px, 0px); }
+    transform: translate(-30px, 0px);
+    text-align: center; }
     main #character-menu div {
       position: absolute;
       height: 500px;

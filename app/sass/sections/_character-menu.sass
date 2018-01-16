@@ -1,11 +1,21 @@
 main
   width: 900px
   height: 700px
+  span
+    @extend %story-text
+    color: $pencil
+    font-size: 4em
+    position: absolute
+    top: 7%
+    left: 50%
+    transform: translate(-50%, -50%)
   #character-menu
     position: relative
-    top: 10%
+    top: 14%
     transition: 2s
     transform: translate(-30px, 0px)
+    text-align: center
+
     div
       position: absolute
       height: 500px
