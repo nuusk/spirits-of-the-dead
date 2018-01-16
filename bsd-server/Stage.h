@@ -33,7 +33,6 @@ void error(string errorMessage)
 void *timer(void* pipeWrite)
 {
     int fd = *((int *)pipeWrite); 
-    cout << fd << endl;
     
     sleep(DURATION);
     

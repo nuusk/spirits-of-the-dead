@@ -387,7 +387,6 @@ private:
             error("accept() error!");
 
         inet_ntop(AF_INET, &(clientInfo.sin_addr), address, INET_ADDRSTRLEN);
-        cout << "TO JEST TO: " << address << endl;
 
         return Client(socket, address, ntohs(clientInfo.sin_port));
     }
@@ -400,21 +399,6 @@ private:
             error("read() error!");
 
         processMessageStdIn(buf);        
-    }
-
-    void processMessageStdIn(string message)
-    {
-        if (message.find("\n") != string::npos)
-            message.erase(message.find("\n", 1));
-
-        if (message == "server")    
-            showServer();
-        else if (message == "clients")    
-            showClients();
-        else if (message == "stages")    
-            showStages();
-        else if (message == "manager")    
-            showGameManager();
     }
 
     void handleTimers()
@@ -586,6 +570,24 @@ private:
         }
     }
 
+    void processMessageStdIn(string message)
+    {
+        if (message == "\n")
+            return; 
+            
+        if (message.find("\n") != string::npos)
+            message.erase(message.find("\n", 1));
+
+        if (message == "server")    
+            showServer();
+        else if (message == "clients")    
+            showClients();
+        else if (message == "stages")    
+            showStages();
+        else if (message == "manager")    
+            showGameManager();
+    }
+
     void processMessageBeforeStart(string message, Client &client)
     {
         while (message != "")
@@ -630,6 +632,8 @@ private:
             string singleMsg = message.substr(0, message.find(END_OF_MSG));
 
             tryToAnswer(singleMsg, client);
+
+            message = message.substr(singleMsg.length() + END_OF_MSG_SIZE);           
         }
     }
 
@@ -642,14 +646,16 @@ private:
             
             string singleMsg = message.substr(0, message.find(END_OF_MSG));
 
-            if (message == "getGameStarted")
+            if (singleMsg == "getGameStarted")
                 writeMessage(getGameStartedInfo(), client);
 
-            else if (message == "playersLobbyInfo")
+            else if (singleMsg == "playersLobbyInfo")
                 writeMessage(getClientsInLobbyInfo(), client);
 
-            else if (message.find("chat") != string::npos)
-                sendMessageToAllLobby(client.name + ": " + message.substr(message.find("chat")+5), client);
+            else if (singleMsg.find("chat") != string::npos)
+                sendMessageToAllLobby(client.name + ": " + singleMsg.substr(singleMsg.find("chat")+5), client);
+
+            message = message.substr(singleMsg.length() + END_OF_MSG_SIZE);            
         }
     }
 };

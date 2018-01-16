@@ -21,7 +21,7 @@ public:
         return serverSocket;
     }
 
-    epoll_event getEvent()
+    epoll_event &getEvent()
     {
         return event;
     }
