@@ -12,28 +12,32 @@ const readyLabel = document.getElementById('players-ready');
 const answerNumber = document.getElementById('answer-number');
 const mostPopularAnswer = document.getElementById('most-popular-answer');
 
-const lobbyDiv = document.getElementById('lobbyDiv');
-const answersDiv = document.getElementById('answersDiv');
+const lobbyDiv = document.getElementsByClassName('lobby');
+const answersDiv = document.getElementsByClassName('answers');
 
 let ready = false;
 let gameStarted = false;
 let chatting = true;
+let nameSet = false;
 
 
 window.onload = () => {
   ipcRenderer.send('getGameStarted');
   ipcRenderer.send('getPlayersLobbyInfo');
-  console.log(global.location.search.slice(8));
   document.getElementById(`${global.location.search.slice(8)}-avatar`).style.display = 'block';
-  console.log(document.getElementById(`${global.location.search.slice(8)}-avatar`));
+  answersDiv[0].style.display = 'none';  
 };
 
 
 //~~~~~~~~~~~~~~~~~~~~~ Events ~~~~~~~~~~~~~~~~~~~~~~~
 commandLine.addEventListener('keydown', (e)=>{
-  if (e.keyCode == 13) {
+  if (e.keyCode == 13 && commandLine.value.trim() != "") {
     if (chatting)
+    {
+      wall.value += 'You: ' + commandLine.value + '\n';
+      wall.scrollTop = wall.scrollHeight;
       ipcRenderer.send('chat', commandLine.value);
+    }
     else
       ipcRenderer.send('terminal:command', commandLine.value);
 
@@ -43,25 +47,24 @@ commandLine.addEventListener('keydown', (e)=>{
 
 readyButton.addEventListener('click', () => {
   if (!ready)
-    readyButton.value = 'Not ready';
+    readyButton.innerHTML = 'Not ready';
   else
-    readyButton.value = 'Ready';
+    readyButton.innerHTML = 'Ready';
 
   ready = !ready;
   ipcRenderer.send('setReadyState', ready);
 });
 
 nameButton.addEventListener('click', () => {
-  if (username.value.trim() != '') {
+  if (!nameSet && username.value.trim() != '') {
+    nameSet = true;
     ipcRenderer.send('setName', username.value);
-    // username.value = "";
     username.disabled = true;
     nameButton.disabled = true;
   }
 });
 
 username.addEventListener('focus', () => {
-  console.log('yo');
   this.value = '';
 });
 
@@ -91,13 +94,14 @@ ipcRenderer.on('answersInfo', (e, data) => {
 
 ipcRenderer.on('chat', (e, data) => {
   wall.value += data.message + '\n';
+  wall.scrollTop = wall.scrollHeight;  
 });
 
 ipcRenderer.on('gameStart', () => {
   gameStarted = true;
   chatting = false;
-  lobbyDiv.style.display = 'none';
-  answersDiv.style.display = 'block';
+  lobbyDiv[0].style.display = 'none';
+  answersDiv[0].style.display = 'block';
   wall.value = "--------- GAME STARTED ---------\n";
   wall.value += "-----------> ENJOY! <-----------\n"
 });
@@ -105,12 +109,12 @@ ipcRenderer.on('gameStart', () => {
 ipcRenderer.on('gameEnd', () => {
   gameStarted = false;
   chatting = true;
-  answersDiv.style.display = 'none';
-  lobbyDiv.style.display = 'block';
+  answersDiv[0].style.display = 'none';
+  lobbyDiv[0].style.display = 'block';
   readyButton.style.display = 'block';
 
   ready = false;
-  readyButton.value = 'Ready';
+  readyButton.innerHTML = 'Ready';
 
   window.scrollTop = window.scrollHeight;
 

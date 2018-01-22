@@ -5,6 +5,7 @@
 #include <fstream>
 #include <cstring>
 #include <arpa/inet.h>
+#include <fcntl.h>
 
 #include "Client.h"
 #include "TcpServer.h"
@@ -340,6 +341,7 @@ private:
         //     return;
         // }
 
+        fcntl(client.fd, F_SETFL, O_NONBLOCK, 1);
         server.addEpollEvent(client.fd);
         
         if (!gameStarted)
@@ -438,6 +440,8 @@ private:
                 sendMessageToAll(getStageAnswersInfo());
                 checkIfAllAnswered();
             }
+            else 
+                gameStartCheck();
         }
     }
 
@@ -651,6 +655,9 @@ private:
 
             else if (singleMsg == "playersLobbyInfo")
                 writeMessage(getClientsInLobbyInfo(), client);
+
+            else if (singleMsg.substr(0, 5) == "name ")
+                setClientName(client, singleMsg.substr(singleMsg.find("name")+5));
 
             else if (singleMsg.find("chat") != string::npos)
                 sendMessageToAllLobby(client.name + ": " + singleMsg.substr(singleMsg.find("chat")+5), client);
