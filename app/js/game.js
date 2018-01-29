@@ -20,14 +20,12 @@ let gameStarted = false;
 let chatting = true;
 let nameSet = false;
 
-
 window.onload = () => {
   ipcRenderer.send('getGameStarted');
   ipcRenderer.send('getPlayersLobbyInfo');
   document.getElementById(`${global.location.search.slice(8)}-avatar`).style.display = 'block';
-  answersDiv[0].style.display = 'none';  
+  answersDiv[0].style.display = 'none';
 };
-
 
 //~~~~~~~~~~~~~~~~~~~~~ Events ~~~~~~~~~~~~~~~~~~~~~~~
 commandLine.addEventListener('keydown', (e)=>{
@@ -94,7 +92,7 @@ ipcRenderer.on('answersInfo', (e, data) => {
 
 ipcRenderer.on('chat', (e, data) => {
   wall.value += data.message + '\n';
-  wall.scrollTop = wall.scrollHeight;  
+  wall.scrollTop = wall.scrollHeight;
 });
 
 ipcRenderer.on('gameStart', () => {

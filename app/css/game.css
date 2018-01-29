@@ -54,7 +54,7 @@ main {
   cursor: default; }
   main #top-menu {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 2fr;
     grid-auto-rows: 330px; }
     main #top-menu div {
       padding: 1em; }
