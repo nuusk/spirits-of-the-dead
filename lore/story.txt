@@ -16,22 +16,89 @@
     "No. "
   ],
   "routing": [
-    "2",
+    "3",
     "-1"
+  ]
+},
+{
+  "text": "While you were enjoying your time with friends, you felt a cool breeze. Strange... the temperature outside was at least 25 degrees. What do you want to do?",
+  "answers": [
+    "Go out of the tavern.",
+    "Don't move."
+  ],
+  "routing": [
+    "3",
+    "5"
   ]
 },
 {
   "text": "As soon as you grabbed the door handle, the room went silent. You turned around curiously and you saw that there was someone new in the tavern. But how could he get into? There is only one door. What do you want to do?",
   "answers": [
     "Leave the tavern anyway.",
-    "Greet the new person that just appeared.",
     "Run away.",
     "Don't move. "
   ],
   "routing": [
-    "-1",
-    "-1",
-    "-1",
+    "4",
+    "4",
+    "5"
+  ]
+},
+{
+  "text": "\"What's the rush?\" - a mysterious man whispered this to you.",
+  "answers": [
+    "Who are you?",
+    "What do you want from me?",
+    "Could you please just let me go?",
+    "Don't stop me."
+  ],
+  "routing": [
+    "6",
+    "8",
+    "7",
+    "7"
+  ]
+},
+{
+  "text": "\"Did you assume I could not sense your presence?\" - a mysterious man whispered this to you.",
+  "answers": [
+    "Who are you?",
+    "What do you want from me?",
+    "Could you please just let me go?",
+    "Don't stop me."
+  ],
+  "routing": [
+    "6",
+    "8",
+    "7",
+    "7"
+  ]
+},
+{
+  "text": "\"My name shall remain a secret, for now.\"",
+  "answers": [
+    "What do you want from me?"
+  ],
+  "routing": [
+    "8"
+  ]
+},
+{
+  "text": "\"I'm afraid we will spend some time together in the coming days.\"",
+  "answers": [
+    "What do you want from me?"
+  ],
+  "routing": [
+    "8"
+  ]
+},
+{
+  "text": "\"I want you.\"",
+  "answers": [
+    "..."
+  ],
+  "routing": [
     "-1"
   ]
-}]
+}
+]

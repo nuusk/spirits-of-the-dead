@@ -1,5 +1,5 @@
 @import url("https://fonts.googleapis.com/css?family=Amatic+SC|Patrick+Hand+SC|Sofia|Great+Vibes");
-main #top-menu .lobby .info-wrapper span, main #top-menu .answers span, main #top-menu button {
+main #top-menu .lobby .info-wrapper span, main #top-menu .answers span, main #top-menu button, main #story textarea {
   font-family: 'Amatic SC', cursive;
   font-size: 1.5em;
   color: #2b2a27; }
