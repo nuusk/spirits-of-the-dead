@@ -132,11 +132,11 @@ ipcRenderer.on('stage', (e, data) => {
     commandLine.focus();
   }, 500);
 
-  wall.value += '\n' + data.text + '\n';
+  wall.value= "";
+  wall.value += data.text + '\n';
 
   for (let i = 0; i < data.answers.length; i++)
     wall.value += `${i+1}. ${data.answers[i]}\n`;
 
-  wall.value += '\n';
   wall.scrollTop = wall.scrollHeight;
 });
