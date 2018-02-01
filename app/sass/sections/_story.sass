@@ -11,3 +11,16 @@ main
       height: 100%
       box-sizing: border-box
       background-color: rgba(220, 220, 220, 0.4)
+      animation: wrap-in 1.2s
+
+@keyframes wrap-in
+  0%
+    transform: scaleX(0)
+    opacity: 0
+  80%
+    transform: scaleX(1.05)
+    opacity: 1
+  90%
+    transform: scaleX(0.95)
+  100%
+    transform: scaleX(1)

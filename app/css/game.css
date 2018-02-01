@@ -78,7 +78,8 @@ main {
         padding: 10px;
         margin: 0;
         border: 2px solid #555555;
-        border-radius: 10px; }
+        border-radius: 10px;
+        animation: wrap-in .7s; }
         main #top-menu .lobby .info-wrapper span {
           display: block; }
           main #top-menu .lobby .info-wrapper span.info {
@@ -89,7 +90,8 @@ main {
     main #top-menu .answers {
       margin: 30px 35px 10px 20px;
       border: 2px solid #555555;
-      border-radius: 10px; }
+      border-radius: 10px;
+      animation: wrap-in .7s; }
       main #top-menu .answers .info {
         margin-bottom: 0px; }
       main #top-menu .answers span {
@@ -101,6 +103,18 @@ main {
       border: none;
       background-color: transparent; }
 
+@keyframes wrap-in {
+  0% {
+    transform: scaleX(0);
+    opacity: 0; }
+  80% {
+    transform: scaleX(1.05);
+    opacity: 1; }
+  90% {
+    transform: scaleX(0.95); }
+  100% {
+    transform: scaleX(1); } }
+
 main #story {
   margin: 40px 10px 10px 10px;
   padding: 10px;
@@ -111,7 +125,20 @@ main #story {
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    background-color: rgba(220, 220, 220, 0.4); }
+    background-color: rgba(220, 220, 220, 0.4);
+    animation: wrap-in 1.2s; }
+
+@keyframes wrap-in {
+  0% {
+    transform: scaleX(0);
+    opacity: 0; }
+  80% {
+    transform: scaleX(1.05);
+    opacity: 1; }
+  90% {
+    transform: scaleX(0.95); }
+  100% {
+    transform: scaleX(1); } }
 
 main #terminal {
   margin: 0 10px 10px 10px;

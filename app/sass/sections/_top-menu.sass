@@ -31,6 +31,7 @@ main
         margin: 0
         border: 2px solid $pencil
         border-radius: 10px
+        animation: wrap-in .7s
         span
           display: block
           @extend %story-text
@@ -45,6 +46,7 @@ main
       margin: 30px 35px 10px 20px
       border: 2px solid $pencil
       border-radius: 10px
+      animation: wrap-in .7s
       .info
         margin-bottom: 0px
       span
@@ -60,3 +62,15 @@ main
       @extend %story-text
       border: none
       background-color: rgba(0,0,0,0)
+
+@keyframes wrap-in
+  0%
+    transform: scaleX(0)
+    opacity: 0
+  80%
+    transform: scaleX(1.05)
+    opacity: 1
+  90%
+    transform: scaleX(0.95)
+  100%
+    transform: scaleX(1)
