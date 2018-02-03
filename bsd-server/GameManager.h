@@ -17,6 +17,11 @@
 
 using namespace std;
 
+enum ReadResult 
+{
+    Good, NotAll, Bad
+};
+
 class GameManager 
 {
     const int playersToStart = 1;
@@ -352,7 +357,7 @@ private:
         cout << "New connection from: " << client.address << ":" << client.port << " fd: " <<  client.fd << endl;
     }
 
-    //PÓKI CO MARTWY KOD
+    //NOT USED
     bool isAlreadyConnected(Client client)
     {
         for (Client c : clients)
@@ -370,7 +375,7 @@ private:
         return false;
     }
     
-    //PÓKI CO MARTWY KOD
+    //NOT USED
     void removeCheater(Client client)
     {
         cout << "Client: " << client.address << ":" << client.port << " fd: " << client.fd << " is trying to cheat! Removing him..." << endl;
@@ -397,7 +402,8 @@ private:
     {
         char buf[BUF_SIZE];
 
-        if(!readMessage(0, buf))
+        int result = read(0, buf, BUF_SIZE);
+        if (result == -1)
             error("read() error!");
 
         processMessageStdIn(buf);        
@@ -423,9 +429,34 @@ private:
             endGame();
     }
 
+    void removeClient(Client &client)
+    {
+        for (int i = 0; i < (int)clients.size(); i++)
+        {
+            if (clients[i].fd == client.fd)
+            {
+                removeClient(i);
+                return;
+            }
+        }
+
+        for (int i = 0; i < (int)clientsLobby.size(); i++)
+        {
+            if (clients[i].fd == client.fd)
+            {
+                removeClient(i);
+                return;
+            }
+        }
+    }
+
     void removeClient(int n)
     {
         cout << "Removing client: " << clients[n].address << ":" << clients[n].port << " fd: " << clients[n].fd << endl;
+        
+        if (clients[n].readyToPlay)
+            readyPlayersCount--;
+        
         close(clients[n].fd);
         clients.erase(clients.begin() + n);
 
@@ -453,15 +484,27 @@ private:
         sendMessageToAllLobby(getClientsInLobbyInfo()); 
     }
 
-    bool readMessage(int fd, char* buf)
+    ReadResult readMessage(int fd, char* buf)
     {
         memset(buf, 0, BUF_SIZE);
 
-        int msgSize = read(fd, buf, BUF_SIZE);
+        
+        int msgSize = recv(fd, buf, BUF_SIZE, MSG_PEEK);
         if (msgSize < 1)
-            return false;
+            return ReadResult::Bad;
 
-        return true;
+        string msg = buf;
+
+        if (msg.find(END_OF_MSG) != string::npos)
+        {
+            msgSize = read(fd, buf, (int)msg.find(END_OF_MSG) + END_OF_MSG_SIZE);
+            if (msgSize < 1)
+                return ReadResult::Bad;
+
+            return ReadResult::Good;
+        } 
+
+        return ReadResult::NotAll;
     }
 
     void readPipe(int fd, char *buf)
@@ -479,8 +522,12 @@ private:
     bool writeMessage(string message, Client &client)
     {
         int result = write(client.fd, message.c_str(), message.size());
-        if (result == -1)
+
+        if (result != (int)message.size())
+        {
+            removeClient(client);
             return false;
+        }
 
         return true;
     }
@@ -536,41 +583,72 @@ private:
     void handleClients()
     {
         char buf[BUF_SIZE];
-        
+        bool breakLoop = false;
+
         for (int i = 0; i < (int)clients.size(); i++)
         {
             if (server.getEvent().events == EPOLLIN && server.getEvent().data.fd == clients[i].fd)
             {
-                if(!readMessage(clients[i].fd, buf))
+                while (true)
                 {
-                    removeClient(i);
-                    break;
-                }
+                    ReadResult result = readMessage(clients[i].fd, buf);
 
-                if (!gameStarted)       
-                    processMessageBeforeStart(buf, clients[i]);
-                else
-                    processMessageInGame(buf, clients[i]);
+                    if(result == ReadResult::Bad)
+                    {
+                        removeClient(i);
+                        breakLoop = true;
+                        break;
+                    }
+
+                    if (result == ReadResult::Good)
+                    {
+                        if (!gameStarted)       
+                            processMessageBeforeStart(buf, clients[i]);
+                        else
+                            processMessageInGame(buf, clients[i]);
+
+                        breakLoop = true;
+                        break;
+                    }
+                }
             }
+
+            if (breakLoop)
+                break;
         }
     }
 
     void handleClientsLobby()
     {
         char buf[BUF_SIZE];
+        bool breakLoop = false;
 
         for (int i = 0; i < (int)clientsLobby.size(); i++)
         {
-            if (server.getEvent().events == EPOLLIN && server.getEvent().data.fd == clientsLobby[i].fd)
+            if (server.getEvent().events == EPOLLIN && server.getEvent().data.fd == clientsLobby[i].fd)            
             {
-                if (!readMessage(clientsLobby[i].fd, buf))
+                while (true)
                 {
-                    removeClientFromLobby(i);
-                    break;
-                }
+                    ReadResult result = readMessage(clientsLobby[i].fd, buf);
 
-                processMessageInLobby(buf, clientsLobby[i]);
+                    if(result == ReadResult::Bad)
+                    {
+                        removeClient(i);
+                        breakLoop = true;
+                        break;
+                    }
+
+                    if (result == ReadResult::Good)
+                    {
+                        processMessageInLobby(buf, clientsLobby[i]);
+                        breakLoop = true;                        
+                        break;
+                    }
+                }
             }
+
+            if (breakLoop)
+                break;
         }
     }
 
@@ -594,33 +672,25 @@ private:
 
     void processMessageBeforeStart(string message, Client &client)
     {
-        while (message != "")
-        {
-            if (message.find(END_OF_MSG) == string::npos)
-                break;
-            
-            string singleMsg = message.substr(0, message.find(END_OF_MSG));
+        message = message.substr(0, message.find(END_OF_MSG));
 
-            if (singleMsg.substr(0, 5) == "name ")
-                setClientName(client, singleMsg.substr(singleMsg.find("name")+5));
+        if (message.substr(0, 5) == "name ")
+            setClientName(client, message.substr(message.find("name")+5));
+    
+        else if (message == "notready")
+            setClientNotReady(client);
         
-            else if (singleMsg == "notready")
-                setClientNotReady(client);
-            
-            else if (singleMsg == "ready")
-                setClientReady(client);
+        else if (message == "ready")
+            setClientReady(client);
 
-            else if (singleMsg == "playersLobbyInfo")
-                writeMessage(getClientsInfo(), client);
+        else if (message == "playersLobbyInfo")
+            writeMessage(getClientsInfo(), client);
 
-            else if (singleMsg == "getGameStarted")
-                writeMessage(getGameStartedInfo(), client);
+        else if (message == "getGameStarted")
+            writeMessage(getGameStartedInfo(), client);
 
-            else if (singleMsg.find("chat ") != string::npos)
-                sendMessageToAll(client.name + ": " + singleMsg.substr(singleMsg.find("chat")+5), client);
-
-            message = message.substr(singleMsg.length() + END_OF_MSG_SIZE);
-        }
+        else if (message.find("chat ") != string::npos)
+            sendMessageToAll(client.name + ": " + message.substr(message.find("chat")+5), client);
     }
 
     void processMessageInGame(string message, Client &client)
@@ -628,41 +698,25 @@ private:
         if (client.answered)
             return;        
      
-        while (message != "")
-        {
-            if (message.find(END_OF_MSG) == string::npos)
-                break;
-            
-            string singleMsg = message.substr(0, message.find(END_OF_MSG));
+        message = message.substr(0, message.find(END_OF_MSG));
 
-            tryToAnswer(singleMsg, client);
-
-            message = message.substr(singleMsg.length() + END_OF_MSG_SIZE);           
-        }
+        tryToAnswer(message, client);
     }
 
     void processMessageInLobby(string message, Client &client)
     {
-        while (message != "")
-        {
-            if (message.find(END_OF_MSG) == string::npos)
-                break;
-            
-            string singleMsg = message.substr(0, message.find(END_OF_MSG));
+        message = message.substr(0, message.find(END_OF_MSG));
 
-            if (singleMsg == "getGameStarted")
-                writeMessage(getGameStartedInfo(), client);
+        if (message == "getGameStarted")
+            writeMessage(getGameStartedInfo(), client);
 
-            else if (singleMsg == "playersLobbyInfo")
-                writeMessage(getClientsInLobbyInfo(), client);
+        else if (message == "playersLobbyInfo")
+            writeMessage(getClientsInLobbyInfo(), client);
 
-            else if (singleMsg.substr(0, 5) == "name ")
-                setClientName(client, singleMsg.substr(singleMsg.find("name")+5));
+        else if (message.substr(0, 5) == "name ")
+            setClientName(client, message.substr(message.find("name")+5));
 
-            else if (singleMsg.find("chat") != string::npos)
-                sendMessageToAllLobby(client.name + ": " + singleMsg.substr(singleMsg.find("chat")+5), client);
-
-            message = message.substr(singleMsg.length() + END_OF_MSG_SIZE);            
-        }
+        else if (message.find("chat") != string::npos)
+            sendMessageToAllLobby(client.name + ": " + message.substr(message.find("chat")+5), client);
     }
 };
