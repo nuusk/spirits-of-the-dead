@@ -442,7 +442,7 @@ private:
 
         for (int i = 0; i < (int)clientsLobby.size(); i++)
         {
-            if (clients[i].fd == client.fd)
+            if (clientsLobby[i].fd == client.fd)
             {
                 removeClient(i);
                 return;
